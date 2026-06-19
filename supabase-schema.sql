@@ -66,6 +66,15 @@ create table if not exists public.site_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.meeting_attendance (
+  meeting_id int not null default 1 references public.meetings(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null default '',
+  email text not null default '',
+  created_at timestamptz not null default now(),
+  primary key (meeting_id, user_id)
+);
+
 create or replace function public.current_user_is_admin()
 returns boolean
 language sql
@@ -146,6 +155,7 @@ alter table public.artworks enable row level security;
 alter table public.meetings enable row level security;
 alter table public.announcements enable row level security;
 alter table public.site_settings enable row level security;
+alter table public.meeting_attendance enable row level security;
 
 drop policy if exists "Profiles are readable by signed-in users" on public.profiles;
 create policy "Profiles are readable by signed-in users"
@@ -224,6 +234,24 @@ on public.meetings for delete
 to authenticated
 using (public.current_user_is_admin());
 
+drop policy if exists "Members can read own attendance and admins can read all" on public.meeting_attendance;
+create policy "Members can read own attendance and admins can read all"
+on public.meeting_attendance for select
+to authenticated
+using (user_id = auth.uid() or public.current_user_is_admin());
+
+drop policy if exists "Members can mark own attendance" on public.meeting_attendance;
+create policy "Members can mark own attendance"
+on public.meeting_attendance for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Members can remove own attendance" on public.meeting_attendance;
+create policy "Members can remove own attendance"
+on public.meeting_attendance for delete
+to authenticated
+using (user_id = auth.uid() or public.current_user_is_admin());
+
 drop policy if exists "Announcements are public" on public.announcements;
 create policy "Announcements are public"
 on public.announcements for select
@@ -282,8 +310,34 @@ with check (
 --   select id from auth.users where email = 'you@example.com'
 -- );
 
--- Optional but useful for real-time updates in hosted projects:
-alter publication supabase_realtime add table public.artworks;
-alter publication supabase_realtime add table public.meetings;
-alter publication supabase_realtime add table public.announcements;
-alter publication supabase_realtime add table public.site_settings;
+-- Optional but useful for real-time updates in hosted projects.
+-- These blocks are safe to rerun if the table is already in the publication.
+do $$
+begin
+  alter publication supabase_realtime add table public.artworks;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.meetings;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.meeting_attendance;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.announcements;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.site_settings;
+exception when duplicate_object then null;
+end $$;

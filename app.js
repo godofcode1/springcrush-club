@@ -16,6 +16,7 @@ const state = {
   approved: [],
   members: [],
   meeting: null,
+  attendance: [],
   announcement: null,
   announcements: [],
   settings: {
@@ -92,6 +93,25 @@ function renderMeeting() {
     meta.textContent = state.meeting?.updated_by_email
       ? `Last updated by ${state.meeting.updated_by_email} on ${new Date(state.meeting.updated_at).toLocaleString()}`
       : "No meeting has been published yet.";
+  }
+
+  const attendanceSummary = $("[data-attendance-summary]");
+  if (attendanceSummary) {
+    if (!state.session) attendanceSummary.textContent = "Log in to mark attendance.";
+    else if (!state.meeting) attendanceSummary.textContent = "No active meeting to attend.";
+    else {
+      const attending = state.attendance.some((row) => row.user_id === state.session.user.id);
+      attendanceSummary.textContent = attending
+        ? "You are marked as attending."
+        : "You are not marked as attending yet.";
+    }
+  }
+
+  const attendButton = $("[data-attend-meeting]");
+  if (attendButton) {
+    const attending = state.attendance.some((row) => row.user_id === state.session?.user?.id);
+    attendButton.textContent = attending ? "Cancel attendance" : "Mark me attending";
+    attendButton.disabled = !state.session || !state.meeting;
   }
 }
 
@@ -242,6 +262,28 @@ function renderAnnouncements() {
   `).join("");
 }
 
+function renderAttendance() {
+  const list = $("[data-attendance-list]");
+  if (!list) return;
+  if (state.profile?.role !== "admin") {
+    list.innerHTML = `<div class="empty">Admin access only.</div>`;
+    return;
+  }
+  if (!state.attendance.length) {
+    list.innerHTML = `<div class="empty">No one has marked attendance yet.</div>`;
+    return;
+  }
+  list.innerHTML = state.attendance.map((row) => `
+    <article class="submission-item member-item">
+      <div class="member-avatar" aria-hidden="true">${escapeHtml((row.display_name || row.email || "?").slice(0, 1).toUpperCase())}</div>
+      <div>
+        <h4>${escapeHtml(row.display_name || "Unnamed member")}</h4>
+        <p>${escapeHtml(row.email || "No email")} - ${escapeHtml(new Date(row.created_at).toLocaleString())}</p>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderAuth() {
   $$("[data-auth-mode]").forEach((button) => button.classList.toggle("active", button.dataset.authMode === state.authMode));
   const nameField = $("[data-name-field]");
@@ -277,6 +319,7 @@ function renderAll() {
   renderSubmissions();
   renderMembers();
   renderAnnouncements();
+  renderAttendance();
   renderSettings();
 }
 
@@ -309,6 +352,7 @@ async function loadPublicData() {
     state.backendIssue = "Supabase tables are not installed yet. Run supabase-schema.sql in Supabase SQL Editor.";
     state.gallery = [];
     state.meeting = null;
+    state.attendance = [];
     state.announcement = null;
     renderAll();
     toast(state.backendIssue);
@@ -331,6 +375,7 @@ async function loadPrivateData() {
     state.approved = [];
     state.members = [];
     state.announcements = [];
+    state.attendance = [];
     renderAll();
     return;
   }
@@ -339,21 +384,25 @@ async function loadPrivateData() {
   state.mySubmissions = mine.data || [];
 
   if (state.profile?.role === "admin") {
-    const [pending, approved, members, announcements] = await Promise.all([
+    const [pending, approved, members, announcements, attendance] = await Promise.all([
       client.from("artworks").select("*").eq("status", "pending").order("updated_at", { ascending: false }),
       client.from("artworks").select("*").eq("status", "approved").order("updated_at", { ascending: false }),
       client.from("profiles").select("id,email,display_name,role,created_at").order("created_at", { ascending: false }),
-      client.from("announcements").select("*").order("created_at", { ascending: false })
+      client.from("announcements").select("*").order("created_at", { ascending: false }),
+      client.from("meeting_attendance").select("*").eq("meeting_id", 1).order("created_at", { ascending: false })
     ]);
     state.pending = pending.data || [];
     state.approved = approved.data || [];
     state.members = members.data || [];
     state.announcements = announcements.data || [];
+    state.attendance = attendance.data || [];
   } else {
     state.pending = [];
     state.approved = [];
     state.members = [];
     state.announcements = [];
+    const attendance = await client.from("meeting_attendance").select("*").eq("meeting_id", 1);
+    state.attendance = attendance.data || [];
   }
   renderAll();
 }
@@ -484,6 +533,33 @@ async function saveMeeting(event) {
   if (error) return toast(error.message);
   toast("Meeting updated for everyone.");
   await loadPublicData();
+}
+
+async function toggleAttendance() {
+  if (!client) return toast("Connect Supabase first.");
+  if (!state.session) return toast("Log in to mark attendance.");
+  if (!state.meeting) return toast("No active meeting to attend.");
+
+  const attending = state.attendance.some((row) => row.user_id === state.session.user.id);
+  if (attending) {
+    const { error } = await client
+      .from("meeting_attendance")
+      .delete()
+      .eq("meeting_id", 1)
+      .eq("user_id", state.session.user.id);
+    if (error) return toast(error.message);
+    toast("Attendance canceled.");
+  } else {
+    const { error } = await client.from("meeting_attendance").insert({
+      meeting_id: 1,
+      user_id: state.session.user.id,
+      display_name: state.profile?.display_name || state.session.user.email?.split("@")[0] || "",
+      email: state.session.user.email || ""
+    });
+    if (error) return toast(error.message);
+    toast("You are marked as attending.");
+  }
+  await loadPrivateData();
 }
 
 async function deleteMeeting() {
@@ -633,6 +709,8 @@ function bindEvents() {
   if (meetingForm) meetingForm.addEventListener("submit", saveMeeting);
   const deleteMeetingButton = $("[data-delete-meeting]");
   if (deleteMeetingButton) deleteMeetingButton.addEventListener("click", deleteMeeting);
+  const attendMeetingButton = $("[data-attend-meeting]");
+  if (attendMeetingButton) attendMeetingButton.addEventListener("click", toggleAttendance);
   const announcementForm = $("[data-announcement-form]");
   if (announcementForm) announcementForm.addEventListener("submit", saveAnnouncement);
   const roleForm = $("[data-role-form]");
@@ -653,6 +731,7 @@ function subscribeToChanges() {
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadPrivateData)
     .on("postgres_changes", { event: "*", schema: "public", table: "meetings" }, loadPublicData)
+    .on("postgres_changes", { event: "*", schema: "public", table: "meeting_attendance" }, loadPrivateData)
     .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => {
       loadPublicData();
       loadPrivateData();
