@@ -42,6 +42,7 @@ const state = {
   gallery: [],
   mySubmissions: [],
   pending: [],
+  members: [],
   meeting: null,
   announcement: null
 };
@@ -176,6 +177,30 @@ function renderSubmissions() {
   }
 }
 
+function renderMembers() {
+  const list = $("[data-member-list]");
+  if (!list) return;
+  if (state.profile?.role !== "admin") {
+    list.innerHTML = `<div class="empty">Admin access only.</div>`;
+    return;
+  }
+  if (!state.members.length) {
+    list.innerHTML = `<div class="empty">Members will appear here after they sign up.</div>`;
+    return;
+  }
+  list.innerHTML = state.members
+    .map((member) => `
+      <article class="submission-item member-item">
+        <div class="member-avatar" aria-hidden="true">${escapeHtml((member.display_name || member.email || "?").slice(0, 1).toUpperCase())}</div>
+        <div>
+          <h4>${escapeHtml(member.display_name || "Unnamed member")}</h4>
+          <p>${escapeHtml(member.email || "No email")} · ${escapeHtml(member.role)}</p>
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
 function renderAuth() {
   $$("[data-auth-mode]").forEach((button) => button.classList.toggle("active", button.dataset.authMode === state.authMode));
   $("[data-name-field]").hidden = state.authMode !== "signup";
@@ -196,6 +221,7 @@ function renderAll() {
   renderAnnouncement();
   renderGallery();
   renderSubmissions();
+  renderMembers();
 }
 
 async function loadProfile() {
@@ -235,6 +261,7 @@ async function loadPrivateData() {
   if (!client || !state.session) {
     state.mySubmissions = [];
     state.pending = [];
+    state.members = [];
     renderAll();
     return;
   }
@@ -244,8 +271,11 @@ async function loadPrivateData() {
   if (state.profile?.role === "admin") {
     const pending = await client.from("artworks").select("*").eq("status", "pending").order("updated_at", { ascending: false });
     state.pending = pending.data || [];
+    const members = await client.from("profiles").select("id,email,display_name,role,created_at").order("created_at", { ascending: false });
+    state.members = members.data || [];
   } else {
     state.pending = [];
+    state.members = [];
   }
   renderAll();
 }
@@ -325,7 +355,13 @@ async function handleArtworkSubmit(event) {
 }
 
 async function moderateArtwork(id, status) {
-  const { error } = await client.from("artworks").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  const now = new Date().toISOString();
+  const { error } = await client.from("artworks").update({
+    status,
+    reviewed_by: state.session.user.id,
+    reviewed_at: now,
+    updated_at: now
+  }).eq("id", id);
   if (error) return toast(error.message);
   toast(status === "approved" ? "Artwork approved." : "Artwork rejected.");
   await Promise.all([loadPublicData(), loadPrivateData()]);
@@ -376,6 +412,22 @@ async function saveAnnouncement(event) {
   await loadPublicData();
 }
 
+async function saveRole(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  const memberEmail = form.email.value.trim();
+  const newRole = form.role.value;
+  const { error } = await client.rpc("set_member_role_by_email", {
+    member_email: memberEmail,
+    new_role: newRole
+  });
+  if (error) return toast(error.message);
+  toast(`${memberEmail} is now ${newRole}.`);
+  form.reset();
+  await loadPrivateData();
+}
+
 function bindEvents() {
   $(".menu-toggle").addEventListener("click", (event) => {
     const open = $(".nav").classList.toggle("open");
@@ -412,6 +464,7 @@ function bindEvents() {
   });
   $("[data-meeting-form]").addEventListener("submit", saveMeeting);
   $("[data-announcement-form]").addEventListener("submit", saveAnnouncement);
+  $("[data-role-form]").addEventListener("submit", saveRole);
 }
 
 function subscribeToChanges() {
@@ -422,6 +475,7 @@ function subscribeToChanges() {
       loadPublicData();
       loadPrivateData();
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, loadPrivateData)
     .on("postgres_changes", { event: "*", schema: "public", table: "meetings" }, loadPublicData)
     .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, loadPublicData)
     .subscribe();

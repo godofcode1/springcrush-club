@@ -5,10 +5,13 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
+  email text not null default '',
   display_name text not null default '',
   role text not null default 'member' check (role in ('member', 'admin')),
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists email text not null default '';
 
 create table if not exists public.artworks (
   id uuid primary key default gen_random_uuid(),
@@ -18,9 +21,14 @@ create table if not exists public.artworks (
   description text default '',
   image_url text not null,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  reviewed_by uuid references auth.users(id),
+  reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.artworks add column if not exists reviewed_by uuid references auth.users(id);
+alter table public.artworks add column if not exists reviewed_at timestamptz;
 
 create table if not exists public.meetings (
   id int primary key default 1 check (id = 1),
@@ -63,9 +71,10 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name, role)
+  insert into public.profiles (id, email, display_name, role)
   values (
     new.id,
+    coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1), 'member'),
     'member'
   )
@@ -73,6 +82,42 @@ begin
   return new;
 end;
 $$;
+
+create or replace function public.set_member_role_by_email(member_email text, new_role text)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_profile public.profiles;
+begin
+  if not public.current_user_is_admin() then
+    raise exception 'Only admins can change member roles.';
+  end if;
+
+  if new_role not in ('member', 'admin') then
+    raise exception 'Role must be member or admin.';
+  end if;
+
+  update public.profiles
+  set role = new_role
+  where lower(email) = lower(member_email)
+  returning * into updated_profile;
+
+  if updated_profile.id is null then
+    raise exception 'No signed-up member found with that email.';
+  end if;
+
+  return updated_profile;
+end;
+$$;
+
+update public.profiles
+set email = auth.users.email
+from auth.users
+where public.profiles.id = auth.users.id
+  and public.profiles.email = '';
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -96,6 +141,13 @@ on public.profiles for update
 to authenticated
 using (id = auth.uid())
 with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
+
+drop policy if exists "Admins can update member roles" on public.profiles;
+create policy "Admins can update member roles"
+on public.profiles for update
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
 
 drop policy if exists "Approved artwork is public" on public.artworks;
 create policy "Approved artwork is public"

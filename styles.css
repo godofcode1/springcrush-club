@@ -43,6 +43,7 @@ a {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -50,6 +51,7 @@ textarea {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid var(--leaf-dark);
   outline-offset: 3px;
@@ -476,6 +478,7 @@ label {
 }
 
 input,
+select,
 textarea {
   background: white;
   border: 1px solid var(--line);
@@ -487,6 +490,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--petal-strong);
   box-shadow: 0 0 0 4px rgba(243, 111, 154, 0.16);
@@ -524,6 +528,18 @@ textarea:focus {
   aspect-ratio: 1;
   border-radius: 6px;
   object-fit: cover;
+  width: 72px;
+}
+
+.member-avatar {
+  align-items: center;
+  aspect-ratio: 1;
+  background: var(--mint);
+  border-radius: 6px;
+  color: var(--leaf-dark);
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
   width: 72px;
 }
 
@@ -779,6 +795,10 @@ textarea:focus {
   }
 
   .submission-item img {
+    width: 56px;
+  }
+
+  .member-avatar {
     width: 56px;
   }
 }

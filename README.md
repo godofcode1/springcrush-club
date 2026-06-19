@@ -29,14 +29,16 @@ With empty Supabase keys, the site runs in demo mode.
 3. Go to Storage and create a public bucket named `artwork`.
 4. Go to Project Settings > API.
 5. Copy your Project URL and anon public key into `config.js`.
-6. Sign up once from the website.
-7. In Supabase SQL Editor, run the admin update at the bottom of `supabase-schema.sql` with your email.
+6. Sign up once from the website with display name `Nael`.
+7. In Supabase SQL Editor, run the first-admin update below with `nael.sify@gmail.com`.
 
 The anon key is designed to be public in browser apps. The Row Level Security policies are what protect member data and admin actions.
 
 ## Give Someone Admin Privileges
 
-First, the person must sign up through the website. Then open Supabase > SQL Editor and run:
+First, the person must sign up through the website. After your own account is admin, open the Admin panel on the site and use the Admin access form to promote or demote members by email.
+
+To make your first account admin, open Supabase > SQL Editor and run:
 
 ```sql
 update public.profiles
@@ -44,11 +46,11 @@ set role = 'admin'
 where id = (
   select id
   from auth.users
-  where email = 'their-email@example.com'
+  where email = 'nael.sify@gmail.com'
 );
 ```
 
-To remove admin access:
+To manually remove admin access:
 
 ```sql
 update public.profiles

@@ -213,6 +213,24 @@
               <button class="button primary full" type="submit">Publish announcement</button>
             </form>
           </div>
+          <div class="panel">
+            <h3>Admin access</h3>
+            <form class="form" data-role-form>
+              <label>
+                Member email
+                <input type="email" name="email" autocomplete="email" placeholder="member@example.com" required />
+              </label>
+              <label>
+                Access level
+                <select name="role" required>
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                </select>
+              </label>
+              <button class="button primary full" type="submit">Update access</button>
+            </form>
+            <div class="submission-list" data-member-list></div>
+          </div>
         </div>
       </section>
     </main>
