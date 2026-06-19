@@ -1,4 +1,4 @@
 window.SPRINGCRUSH_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: ""
+  supabaseUrl: "https://vuubdfwqsrzygldmylid.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1dWJkZndxc3J6eWdsZG15bGlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzg5MjcsImV4cCI6MjA5NzQ1NDkyN30.m8Kk6pM3dCJK_Iw2bHNJXOjNYFrp0eUBNOt6qXq70vc"
 };
