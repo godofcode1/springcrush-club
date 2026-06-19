@@ -44,7 +44,8 @@ const state = {
   pending: [],
   members: [],
   meeting: null,
-  announcement: null
+  announcement: null,
+  backendIssue: ""
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -73,6 +74,10 @@ function formatDate(value) {
 
 function setLiveStatus() {
   const label = $("[data-live-status]");
+  if (state.backendIssue) {
+    label.textContent = "Supabase setup needed";
+    return;
+  }
   label.textContent = hasSupabase ? "Live with Supabase" : "Demo mode";
 }
 
@@ -250,7 +255,21 @@ async function loadPublicData() {
     client.from("announcements").select("*").order("created_at", { ascending: false }).limit(1).maybeSingle()
   ]);
 
+  const setupError = [art.error, meeting.error, announcement.error].find((error) =>
+    error?.message?.includes("schema cache") || error?.code === "PGRST205"
+  );
+  if (setupError) {
+    state.backendIssue = "Supabase tables are not installed yet. Run supabase-schema.sql in Supabase SQL Editor.";
+    state.gallery = [];
+    state.meeting = null;
+    state.announcement = null;
+    renderAll();
+    toast(state.backendIssue);
+    return;
+  }
+
   if (art.error) toast(art.error.message);
+  state.backendIssue = "";
   state.gallery = art.data || [];
   state.meeting = meeting.data || null;
   state.announcement = announcement.data || null;
