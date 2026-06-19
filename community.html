@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gallery | Springcrush Club</title>
+    <title>Community | Springcrush Club</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
@@ -13,7 +13,7 @@
     <script defer src="app.js"></script>
   </head>
   <body>
-    <a class="skip-link" href="#gallery">Skip to gallery</a>
+    <a class="skip-link" href="#community">Skip to community</a>
     <header class="topbar">
       <a class="brand" href="index.html" aria-label="Springcrush home"><span class="brand-mark">SC</span><span>Springcrush</span></a>
       <nav class="nav" aria-label="Main navigation">
@@ -26,21 +26,41 @@
       <button class="icon-button menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="false"><span aria-hidden="true"></span></button>
     </header>
 
-    <main id="gallery" class="section">
+    <main id="community" class="section">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Public gallery</p>
-          <h1 class="page-title">Approved pieces</h1>
+          <p class="eyebrow">Club journal</p>
+          <h1 class="page-title">Community board</h1>
         </div>
-        <span class="status-pill" data-live-status>Demo mode</span>
       </div>
-      <div class="reference-strip" aria-label="Spring mood references">
-        <span>digital art</span>
-        <span>sketchbook pages</span>
-        <span>sculpting</span>
-        <span>paint studies</span>
-      </div>
-      <div class="gallery-grid" data-gallery></div>
+      <section class="community-grid">
+        <article class="panel feature-panel">
+          <p class="eyebrow">Monthly theme</p>
+          <div data-monthly-theme></div>
+        </article>
+        <article class="panel feature-panel">
+          <p class="eyebrow">Featured artist</p>
+          <div data-featured-artist></div>
+        </article>
+      </section>
+      <section class="section-lite">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Event photo albums</p>
+            <h2>Picnic-table memories</h2>
+          </div>
+        </div>
+        <div class="gallery-grid" data-albums></div>
+      </section>
+      <section class="section-lite">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Member profiles</p>
+            <h2>Artists in the club</h2>
+          </div>
+        </div>
+        <div class="submission-list" data-public-profiles></div>
+      </section>
     </main>
 
     <div class="toast" data-toast role="status" aria-live="polite"></div>

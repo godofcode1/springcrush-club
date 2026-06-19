@@ -19,6 +19,11 @@ const state = {
   attendance: [],
   announcement: null,
   announcements: [],
+  albums: [],
+  monthlyTheme: null,
+  featuredArtist: null,
+  profiles: [],
+  comments: [],
   settings: {
     animations_enabled: true
   },
@@ -143,7 +148,9 @@ function renderGallery() {
     galleryEl.innerHTML = `<div class="empty gallery-empty">No approved artwork yet.</div>`;
     return;
   }
-  galleryEl.innerHTML = state.gallery.map((art) => `
+  galleryEl.innerHTML = state.gallery.map((art) => {
+    const comments = state.comments.filter((comment) => comment.artwork_id === art.id);
+    return `
     <article class="art-card">
       <img src="${escapeHtml(art.image_url || demoImages[0])}" alt="${escapeHtml(art.title)} by ${escapeHtml(art.artist_name)}" loading="lazy">
       <div class="art-card-body">
@@ -151,9 +158,20 @@ function renderGallery() {
         <p>by ${escapeHtml(art.artist_name)}</p>
         <p>${escapeHtml(art.description || "")}</p>
         <span class="tag">approved</span>
+        <div class="comments-block">
+          <h4>Comments</h4>
+          ${comments.length ? comments.map((comment) => `
+            <p><strong>${escapeHtml(comment.display_name || comment.email || "Member")}:</strong> ${escapeHtml(comment.body)}</p>
+          `).join("") : `<p>No comments yet.</p>`}
+          <form class="comment-form" data-comment-form="${art.id}">
+            <input type="text" name="body" maxlength="280" placeholder="Add a kind comment" required />
+            <button class="small-button" type="submit">Post</button>
+          </form>
+        </div>
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function submissionMarkup(art, options = {}) {
@@ -262,6 +280,55 @@ function renderAnnouncements() {
   `).join("");
 }
 
+function renderCommunity() {
+  const themeEl = $("[data-monthly-theme]");
+  if (themeEl) {
+    themeEl.innerHTML = state.monthlyTheme
+      ? `<h2>${escapeHtml(state.monthlyTheme.title)}</h2><p>${escapeHtml(state.monthlyTheme.description || "")}</p>`
+      : `<h2>No theme yet</h2><p>Admins can publish this month&apos;s creative theme.</p>`;
+  }
+
+  const featuredEl = $("[data-featured-artist]");
+  if (featuredEl) {
+    featuredEl.innerHTML = state.featuredArtist
+      ? `<h2>${escapeHtml(state.featuredArtist.name)}</h2><p>${escapeHtml(state.featuredArtist.bio || "")}</p><span class="tag">${escapeHtml(state.featuredArtist.specialty || "featured artist")}</span>`
+      : `<h2>No featured artist yet</h2><p>Admins can spotlight one club member.</p>`;
+  }
+
+  const albumsEl = $("[data-albums]");
+  if (albumsEl) {
+    albumsEl.innerHTML = state.albums.length
+      ? state.albums.map((album) => `
+        <article class="art-card">
+          <img src="${escapeHtml(album.cover_url || demoImages[0])}" alt="${escapeHtml(album.title)}" loading="lazy">
+          <div class="art-card-body">
+            <h3>${escapeHtml(album.title)}</h3>
+            <p>${escapeHtml(album.description || "")}</p>
+            ${album.album_url ? `<a class="button ghost" href="${escapeHtml(album.album_url)}" target="_blank" rel="noreferrer">Open album</a>` : ""}
+          </div>
+        </article>
+      `).join("")
+      : `<div class="empty gallery-empty">No event photo albums yet.</div>`;
+  }
+
+  const profilesEl = $("[data-public-profiles]");
+  if (profilesEl) {
+    const publicProfiles = state.profiles.filter((profile) => profile.is_public);
+    profilesEl.innerHTML = publicProfiles.length
+      ? publicProfiles.map((profile) => `
+        <article class="submission-item member-item">
+          <div class="member-avatar" aria-hidden="true">${escapeHtml((profile.display_name || profile.email || "?").slice(0, 1).toUpperCase())}</div>
+          <div>
+            <h4>${escapeHtml(profile.display_name || "Unnamed member")}</h4>
+            <p>${escapeHtml(profile.specialty || "member artist")}</p>
+            <p>${escapeHtml(profile.bio || "")}</p>
+          </div>
+        </article>
+      `).join("")
+      : `<div class="empty">No public member profiles yet.</div>`;
+  }
+}
+
 function renderAttendance() {
   const list = $("[data-attendance-list]");
   if (!list) return;
@@ -302,6 +369,14 @@ function renderAuth() {
   if (userEmail) userEmail.textContent = state.session?.user?.email || "";
   if (adminSection) adminSection.hidden = state.profile?.role !== "admin";
   if (adminLink) adminLink.hidden = state.profile?.role !== "admin";
+
+  const profileForm = $("[data-profile-form]");
+  if (profileForm && state.profile) {
+    profileForm.display_name.value = state.profile.display_name || "";
+    profileForm.bio.value = state.profile.bio || "";
+    profileForm.specialty.value = state.profile.specialty || "";
+    profileForm.is_public.checked = Boolean(state.profile.is_public);
+  }
 }
 
 function renderSettings() {
@@ -320,6 +395,7 @@ function renderAll() {
   renderMembers();
   renderAnnouncements();
   renderAttendance();
+  renderCommunity();
   renderSettings();
 }
 
@@ -338,14 +414,19 @@ async function loadPublicData() {
     return;
   }
 
-  const [art, meeting, announcement, animationSetting] = await Promise.all([
+  const [art, meeting, announcement, animationSetting, albums, monthlyTheme, featuredArtist, profiles, comments] = await Promise.all([
     client.from("artworks").select("*").eq("status", "approved").order("created_at", { ascending: false }),
     client.from("meetings").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     client.from("announcements").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    client.from("site_settings").select("*").eq("key", "animations_enabled").maybeSingle()
+    client.from("site_settings").select("*").eq("key", "animations_enabled").maybeSingle(),
+    client.from("event_albums").select("*").order("created_at", { ascending: false }),
+    client.from("monthly_themes").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    client.from("featured_artists").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    client.from("profiles").select("id,email,display_name,bio,specialty,is_public").eq("is_public", true).order("display_name", { ascending: true }),
+    client.from("artwork_comments").select("*").order("created_at", { ascending: true })
   ]);
 
-  const setupError = [art.error, meeting.error, announcement.error, animationSetting.error].find((error) =>
+  const setupError = [art.error, meeting.error, announcement.error, animationSetting.error, albums.error, monthlyTheme.error, featuredArtist.error, profiles.error, comments.error].find((error) =>
     error?.message?.includes("schema cache") || error?.code === "PGRST205"
   );
   if (setupError) {
@@ -354,6 +435,11 @@ async function loadPublicData() {
     state.meeting = null;
     state.attendance = [];
     state.announcement = null;
+    state.albums = [];
+    state.monthlyTheme = null;
+    state.featuredArtist = null;
+    state.profiles = [];
+    state.comments = [];
     renderAll();
     toast(state.backendIssue);
     return;
@@ -365,6 +451,11 @@ async function loadPublicData() {
   state.meeting = meeting.data || null;
   state.announcement = announcement.data || null;
   state.settings.animations_enabled = animationSetting.data?.value ?? true;
+  state.albums = albums.data || [];
+  state.monthlyTheme = monthlyTheme.data || null;
+  state.featuredArtist = featuredArtist.data || null;
+  state.profiles = profiles.data || [];
+  state.comments = comments.data || [];
   renderAll();
 }
 
@@ -632,6 +723,96 @@ async function saveSettings(event) {
   toast("Style settings saved.");
 }
 
+async function saveAlbum(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  const { error } = await client.from("event_albums").insert({
+    title: form.title.value.trim(),
+    description: form.description.value.trim(),
+    cover_url: form.cover_url.value.trim(),
+    album_url: form.album_url.value.trim(),
+    created_by: state.session.user.id,
+    created_by_email: state.session.user.email || ""
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Album added.");
+  await loadPublicData();
+}
+
+async function saveMonthlyTheme(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  await client.from("monthly_themes").update({ is_active: false }).eq("is_active", true);
+  const { error } = await client.from("monthly_themes").insert({
+    title: form.title.value.trim(),
+    description: form.description.value.trim(),
+    month_label: form.month_label.value.trim(),
+    is_active: true,
+    created_by: state.session.user.id,
+    created_by_email: state.session.user.email || ""
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Monthly theme published.");
+  await loadPublicData();
+}
+
+async function saveFeaturedArtist(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  await client.from("featured_artists").update({ is_active: false }).eq("is_active", true);
+  const { error } = await client.from("featured_artists").insert({
+    name: form.name.value.trim(),
+    bio: form.bio.value.trim(),
+    specialty: form.specialty.value.trim(),
+    is_active: true,
+    created_by: state.session.user.id,
+    created_by_email: state.session.user.email || ""
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Featured artist updated.");
+  await loadPublicData();
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+  if (!client || !state.session) return toast("Log in first.");
+  const form = event.currentTarget;
+  const { error } = await client.from("profiles").update({
+    display_name: form.display_name.value.trim(),
+    bio: form.bio.value.trim(),
+    specialty: form.specialty.value.trim(),
+    is_public: form.is_public.checked
+  }).eq("id", state.session.user.id);
+  if (error) return toast(error.message);
+  toast("Profile saved.");
+  await loadProfile();
+  await loadPublicData();
+}
+
+async function saveComment(event) {
+  event.preventDefault();
+  if (!client || !state.session) return toast("Log in to comment.");
+  const form = event.currentTarget;
+  const artworkId = form.dataset.commentForm;
+  const { error } = await client.from("artwork_comments").insert({
+    artwork_id: artworkId,
+    user_id: state.session.user.id,
+    display_name: state.profile?.display_name || state.session.user.email?.split("@")[0] || "",
+    email: state.session.user.email || "",
+    body: form.body.value.trim()
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Comment posted.");
+  await loadPublicData();
+}
+
 function selectMember(email, name) {
   const emailInput = $("[data-selected-member-email]");
   const label = $("[data-selected-member]");
@@ -719,6 +900,17 @@ function bindEvents() {
   if (memberSearch) memberSearch.addEventListener("input", renderMembers);
   const settingsForm = $("[data-settings-form]");
   if (settingsForm) settingsForm.addEventListener("submit", saveSettings);
+  const albumForm = $("[data-album-form]");
+  if (albumForm) albumForm.addEventListener("submit", saveAlbum);
+  const themeForm = $("[data-theme-form]");
+  if (themeForm) themeForm.addEventListener("submit", saveMonthlyTheme);
+  const featuredForm = $("[data-featured-form]");
+  if (featuredForm) featuredForm.addEventListener("submit", saveFeaturedArtist);
+  const profileForm = $("[data-profile-form]");
+  if (profileForm) profileForm.addEventListener("submit", saveProfile);
+  document.addEventListener("submit", (event) => {
+    if (event.target.matches("[data-comment-form]")) saveComment(event);
+  });
 }
 
 function subscribeToChanges() {

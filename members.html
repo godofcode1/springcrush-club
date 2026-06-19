@@ -18,6 +18,7 @@
       <a class="brand" href="index.html" aria-label="Springcrush home"><span class="brand-mark">SC</span><span>Springcrush</span></a>
       <nav class="nav" aria-label="Main navigation">
         <a href="gallery.html">Gallery</a>
+        <a href="community.html">Community</a>
         <a href="submit.html">Submit</a>
         <a href="members.html">Members</a>
         <a href="admin.html" data-admin-link hidden>Admin</a>
@@ -30,6 +31,16 @@
         <p class="eyebrow">Member studio</p>
         <h1 class="page-title">Your submissions</h1>
         <p>Edit your own work any time. Every edit returns the piece to pending review.</p>
+      </div>
+      <div class="panel">
+        <h3>Your profile</h3>
+        <form class="form profile-form" data-profile-form>
+          <label>Display name<input type="text" name="display_name" maxlength="80" /></label>
+          <label>Art focus<input type="text" name="specialty" maxlength="100" placeholder="digital, sculpting, painting..." /></label>
+          <label>Short bio<textarea name="bio" rows="3" maxlength="400"></textarea></label>
+          <label class="toggle-row"><input type="checkbox" name="is_public" /> Show my profile on the community page</label>
+          <button class="button primary full" type="submit">Save profile</button>
+        </form>
       </div>
       <div class="panel">
         <form class="form" data-art-form>

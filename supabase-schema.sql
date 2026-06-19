@@ -7,11 +7,17 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null default '',
   display_name text not null default '',
+  bio text default '',
+  specialty text default '',
+  is_public boolean not null default false,
   role text not null default 'member' check (role in ('member', 'admin')),
   created_at timestamptz not null default now()
 );
 
 alter table public.profiles add column if not exists email text not null default '';
+alter table public.profiles add column if not exists bio text default '';
+alter table public.profiles add column if not exists specialty text default '';
+alter table public.profiles add column if not exists is_public boolean not null default false;
 
 create table if not exists public.artworks (
   id uuid primary key default gen_random_uuid(),
@@ -73,6 +79,49 @@ create table if not exists public.meeting_attendance (
   email text not null default '',
   created_at timestamptz not null default now(),
   primary key (meeting_id, user_id)
+);
+
+create table if not exists public.event_albums (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text default '',
+  cover_url text default '',
+  album_url text default '',
+  created_by uuid references auth.users(id),
+  created_by_email text default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.monthly_themes (
+  id uuid primary key default gen_random_uuid(),
+  month_label text not null,
+  title text not null,
+  description text default '',
+  is_active boolean not null default true,
+  created_by uuid references auth.users(id),
+  created_by_email text default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.featured_artists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  bio text default '',
+  specialty text default '',
+  is_active boolean not null default true,
+  created_by uuid references auth.users(id),
+  created_by_email text default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.artwork_comments (
+  id uuid primary key default gen_random_uuid(),
+  artwork_id uuid not null references public.artworks(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text default '',
+  email text default '',
+  body text not null,
+  created_at timestamptz not null default now()
 );
 
 create or replace function public.current_user_is_admin()
@@ -156,12 +205,16 @@ alter table public.meetings enable row level security;
 alter table public.announcements enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.meeting_attendance enable row level security;
+alter table public.event_albums enable row level security;
+alter table public.monthly_themes enable row level security;
+alter table public.featured_artists enable row level security;
+alter table public.artwork_comments enable row level security;
 
 drop policy if exists "Profiles are readable by signed-in users" on public.profiles;
 create policy "Profiles are readable by signed-in users"
 on public.profiles for select
-to authenticated
-using (true);
+to anon, authenticated
+using (is_public = true or auth.role() = 'authenticated');
 
 drop policy if exists "Members can update their own profile name" on public.profiles;
 create policy "Members can update their own profile name"
@@ -252,6 +305,63 @@ on public.meeting_attendance for delete
 to authenticated
 using (user_id = auth.uid() or public.current_user_is_admin());
 
+drop policy if exists "Event albums are public" on public.event_albums;
+create policy "Event albums are public"
+on public.event_albums for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can manage event albums" on public.event_albums;
+create policy "Admins can manage event albums"
+on public.event_albums for all
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+drop policy if exists "Monthly themes are public" on public.monthly_themes;
+create policy "Monthly themes are public"
+on public.monthly_themes for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can manage monthly themes" on public.monthly_themes;
+create policy "Admins can manage monthly themes"
+on public.monthly_themes for all
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+drop policy if exists "Featured artists are public" on public.featured_artists;
+create policy "Featured artists are public"
+on public.featured_artists for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can manage featured artists" on public.featured_artists;
+create policy "Admins can manage featured artists"
+on public.featured_artists for all
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
+drop policy if exists "Artwork comments are public" on public.artwork_comments;
+create policy "Artwork comments are public"
+on public.artwork_comments for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Members can comment" on public.artwork_comments;
+create policy "Members can comment"
+on public.artwork_comments for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Members can delete own comments and admins can delete all" on public.artwork_comments;
+create policy "Members can delete own comments and admins can delete all"
+on public.artwork_comments for delete
+to authenticated
+using (user_id = auth.uid() or public.current_user_is_admin());
+
 drop policy if exists "Announcements are public" on public.announcements;
 create policy "Announcements are public"
 on public.announcements for select
@@ -339,5 +449,29 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.site_settings;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.event_albums;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.monthly_themes;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.featured_artists;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.artwork_comments;
 exception when duplicate_object then null;
 end $$;

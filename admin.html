@@ -18,6 +18,7 @@
       <a class="brand" href="index.html" aria-label="Springcrush home"><span class="brand-mark">SC</span><span>Springcrush</span></a>
       <nav class="nav" aria-label="Main navigation">
         <a href="gallery.html">Gallery</a>
+        <a href="community.html">Community</a>
         <a href="submit.html">Submit</a>
         <a href="members.html">Members</a>
         <a href="admin.html" data-admin-link hidden>Admin</a>
@@ -96,6 +97,34 @@
               Gentle animations
             </label>
             <button class="button primary full" type="submit">Save style settings</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h3>Monthly art theme</h3>
+          <form class="form" data-theme-form>
+            <label>Month label<input type="text" name="month_label" maxlength="40" placeholder="June 2026" required /></label>
+            <label>Theme title<input type="text" name="title" maxlength="100" required /></label>
+            <label>Description<textarea name="description" rows="3" maxlength="500"></textarea></label>
+            <button class="button primary full" type="submit">Publish theme</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h3>Featured artist</h3>
+          <form class="form" data-featured-form>
+            <label>Name<input type="text" name="name" maxlength="100" required /></label>
+            <label>Art focus<input type="text" name="specialty" maxlength="100" /></label>
+            <label>Bio<textarea name="bio" rows="3" maxlength="500"></textarea></label>
+            <button class="button primary full" type="submit">Set featured artist</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h3>Event photo album</h3>
+          <form class="form" data-album-form>
+            <label>Album title<input type="text" name="title" maxlength="100" required /></label>
+            <label>Description<textarea name="description" rows="3" maxlength="500"></textarea></label>
+            <label>Cover image URL<input type="url" name="cover_url" placeholder="https://..." /></label>
+            <label>Album link<input type="url" name="album_url" placeholder="https://..." /></label>
+            <button class="button primary full" type="submit">Add album</button>
           </form>
         </div>
       </div>
