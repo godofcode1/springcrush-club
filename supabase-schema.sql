@@ -421,6 +421,15 @@ with check (
   and auth.uid()::text = (storage.foldername(name))[1]
 );
 
+drop policy if exists "Admins delete artwork bucket files" on storage.objects;
+create policy "Admins delete artwork bucket files"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'artwork'
+  and public.is_admin(auth.uid())
+);
+
 -- Make the signed-in account with this email the first admin:
 -- update public.profiles set role = 'admin' where id = (
 --   select id from auth.users where email = 'you@example.com'

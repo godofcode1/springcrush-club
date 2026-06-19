@@ -275,6 +275,42 @@ function renderFeaturedArtistPicker() {
     : `<option value="">Members will appear after they sign up</option>`;
 }
 
+function renderAlbumManager() {
+  const manager = $("[data-album-manager]");
+  if (!manager) return;
+  if (state.profile?.role !== "admin") {
+    manager.innerHTML = `<div class="empty">Admin access only.</div>`;
+    return;
+  }
+  if (!state.albums.length) {
+    manager.innerHTML = `<div class="empty">Albums will appear here after you publish them.</div>`;
+    return;
+  }
+  manager.innerHTML = state.albums.map((album) => {
+    const photos = Array.isArray(album.photo_urls) ? album.photo_urls.filter(Boolean) : [];
+    const cover = album.cover_url || photos[0] || "";
+    const photoSet = [...new Set([cover, ...photos].filter(Boolean))];
+    return `
+      <article class="album-admin-item">
+        <div>
+          <h4>${escapeHtml(album.title)}</h4>
+          <p>${photoSet.length ? `${photoSet.length} photo${photoSet.length === 1 ? "" : "s"}` : "No uploaded photos"}</p>
+        </div>
+        ${photoSet.length ? `
+          <div class="album-admin-grid">
+            ${photoSet.map((photo) => `
+              <div class="album-admin-photo">
+                <img src="${escapeHtml(photo)}" alt="${escapeHtml(album.title)} photo" loading="lazy">
+                <button class="small-button danger" type="button" data-remove-album-photo="${escapeHtml(album.id)}" data-photo-url="${escapeHtml(photo)}">Remove</button>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+      </article>
+    `;
+  }).join("");
+}
+
 function renderAnnouncements() {
   const list = $("[data-announcement-list]");
   if (!list) return;
@@ -419,6 +455,7 @@ function renderAll() {
   renderSubmissions();
   renderMembers();
   renderFeaturedArtistPicker();
+  renderAlbumManager();
   renderAnnouncements();
   renderAttendance();
   renderCommunity();
@@ -782,6 +819,35 @@ async function saveAlbum(event) {
   }
 }
 
+function storagePathFromPublicUrl(url) {
+  const marker = "/storage/v1/object/public/artwork/";
+  const index = url.indexOf(marker);
+  if (index === -1) return "";
+  return decodeURIComponent(url.slice(index + marker.length).split("?")[0]);
+}
+
+async function removeAlbumPhoto(albumId, photoUrl) {
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const album = state.albums.find((item) => item.id === albumId);
+  if (!album) return toast("Album not found.");
+
+  const remainingPhotos = (Array.isArray(album.photo_urls) ? album.photo_urls : []).filter((url) => url !== photoUrl);
+  const nextCover = album.cover_url === photoUrl ? (remainingPhotos[0] || "") : album.cover_url;
+  const { error } = await client.from("event_albums").update({
+    photo_urls: remainingPhotos,
+    cover_url: nextCover
+  }).eq("id", albumId);
+  if (error) return toast(error.message);
+
+  const storagePath = storagePathFromPublicUrl(photoUrl);
+  if (storagePath) {
+    await client.storage.from("artwork").remove([storagePath]);
+  }
+
+  toast("Photo removed from album.");
+  await loadPublicData();
+}
+
 async function saveMonthlyTheme(event) {
   event.preventDefault();
   if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
@@ -919,6 +985,7 @@ function bindEvents() {
     const rejectId = event.target.closest("[data-reject-art]")?.dataset.rejectArt;
     const deleteId = event.target.closest("[data-delete-art]")?.dataset.deleteArt;
     const archiveAnnouncementId = event.target.closest("[data-archive-announcement]")?.dataset.archiveAnnouncement;
+    const removeAlbumPhotoButton = event.target.closest("[data-remove-album-photo]");
     const selectedMember = event.target.closest("[data-select-member]");
     const quickRole = event.target.closest("[data-quick-role]");
     if (editId) editArtwork(editId);
@@ -926,6 +993,7 @@ function bindEvents() {
     if (rejectId) moderateArtwork(rejectId, "rejected");
     if (deleteId) deleteArtwork(deleteId);
     if (archiveAnnouncementId) archiveAnnouncement(archiveAnnouncementId);
+    if (removeAlbumPhotoButton) removeAlbumPhoto(removeAlbumPhotoButton.dataset.removeAlbumPhoto, removeAlbumPhotoButton.dataset.photoUrl);
     if (selectedMember) selectMember(selectedMember.dataset.selectMember, selectedMember.dataset.selectMemberName);
     if (quickRole) updateRoleForEmail(quickRole.dataset.quickRole, quickRole.dataset.roleValue);
   });
@@ -972,6 +1040,7 @@ function subscribeToChanges() {
       loadPublicData();
       loadPrivateData();
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "event_albums" }, loadPublicData)
     .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, loadPublicData)
     .subscribe();
 }
