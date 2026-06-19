@@ -111,9 +111,8 @@
         <div class="panel">
           <h3>Featured artist</h3>
           <form class="form" data-featured-form>
-            <label>Name<input type="text" name="name" maxlength="100" required /></label>
-            <label>Art focus<input type="text" name="specialty" maxlength="100" /></label>
-            <label>Bio<textarea name="bio" rows="3" maxlength="500"></textarea></label>
+            <label>Choose member<select name="profile_id" data-featured-member required></select></label>
+            <label>Spotlight note<textarea name="bio" rows="3" maxlength="500" placeholder="Optional: leave blank to use their profile bio"></textarea></label>
             <button class="button primary full" type="submit">Set featured artist</button>
           </form>
         </div>
@@ -122,6 +121,7 @@
           <form class="form" data-album-form>
             <label>Album title<input type="text" name="title" maxlength="100" required /></label>
             <label>Description<textarea name="description" rows="3" maxlength="500"></textarea></label>
+            <label>Upload photos<input type="file" name="photos" accept="image/*" multiple /></label>
             <label>Cover image URL<input type="url" name="cover_url" placeholder="https://..." /></label>
             <label>Album link<input type="url" name="album_url" placeholder="https://..." /></label>
             <button class="button primary full" type="submit">Add album</button>

@@ -500,6 +500,20 @@ h3 {
   margin-bottom: 10px;
 }
 
+.album-strip {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 12px 0;
+}
+
+.album-strip img {
+  aspect-ratio: 1;
+  border: 1px solid rgba(39, 48, 38, 0.12);
+  border-radius: 6px;
+  height: auto;
+}
+
 .tag {
   background: rgba(77, 138, 76, 0.12);
   border-radius: 999px;

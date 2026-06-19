@@ -86,11 +86,14 @@ create table if not exists public.event_albums (
   title text not null,
   description text default '',
   cover_url text default '',
+  photo_urls text[] not null default '{}',
   album_url text default '',
   created_by uuid references auth.users(id),
   created_by_email text default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.event_albums add column if not exists photo_urls text[] not null default '{}';
 
 create table if not exists public.monthly_themes (
   id uuid primary key default gen_random_uuid(),
@@ -105,6 +108,7 @@ create table if not exists public.monthly_themes (
 
 create table if not exists public.featured_artists (
   id uuid primary key default gen_random_uuid(),
+  profile_id uuid references public.profiles(id) on delete set null,
   name text not null,
   bio text default '',
   specialty text default '',
@@ -113,6 +117,8 @@ create table if not exists public.featured_artists (
   created_by_email text default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.featured_artists add column if not exists profile_id uuid references public.profiles(id) on delete set null;
 
 create table if not exists public.artwork_comments (
   id uuid primary key default gen_random_uuid(),

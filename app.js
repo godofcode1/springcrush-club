@@ -255,6 +255,26 @@ function renderMembers() {
   `).join("");
 }
 
+function renderFeaturedArtistPicker() {
+  const select = $("[data-featured-member]");
+  if (!select) return;
+  if (state.profile?.role !== "admin") {
+    select.innerHTML = `<option value="">Admin access only</option>`;
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  const members = state.members.filter((member) => member.email || member.display_name);
+  select.innerHTML = members.length
+    ? `<option value="">Choose the top artist</option>${members.map((member) => {
+      const name = member.display_name || "Unnamed member";
+      const email = member.email || "no email";
+      const focus = member.specialty ? ` - ${member.specialty}` : "";
+      return `<option value="${escapeHtml(member.id)}">${escapeHtml(name)} (${escapeHtml(email)})${escapeHtml(focus)}</option>`;
+    }).join("")}`
+    : `<option value="">Members will appear after they sign up</option>`;
+}
+
 function renderAnnouncements() {
   const list = $("[data-announcement-list]");
   if (!list) return;
@@ -298,16 +318,21 @@ function renderCommunity() {
   const albumsEl = $("[data-albums]");
   if (albumsEl) {
     albumsEl.innerHTML = state.albums.length
-      ? state.albums.map((album) => `
-        <article class="art-card">
-          <img src="${escapeHtml(album.cover_url || demoImages[0])}" alt="${escapeHtml(album.title)}" loading="lazy">
-          <div class="art-card-body">
-            <h3>${escapeHtml(album.title)}</h3>
-            <p>${escapeHtml(album.description || "")}</p>
-            ${album.album_url ? `<a class="button ghost" href="${escapeHtml(album.album_url)}" target="_blank" rel="noreferrer">Open album</a>` : ""}
-          </div>
-        </article>
-      `).join("")
+      ? state.albums.map((album) => {
+        const photos = Array.isArray(album.photo_urls) ? album.photo_urls.filter(Boolean) : [];
+        const cover = album.cover_url || photos[0] || demoImages[0];
+        return `
+          <article class="art-card album-card">
+            <img src="${escapeHtml(cover)}" alt="${escapeHtml(album.title)}" loading="lazy">
+            <div class="art-card-body">
+              <h3>${escapeHtml(album.title)}</h3>
+              <p>${escapeHtml(album.description || "")}</p>
+              ${photos.length ? `<div class="album-strip">${photos.slice(0, 6).map((photo) => `<img src="${escapeHtml(photo)}" alt="${escapeHtml(album.title)} photo" loading="lazy">`).join("")}</div>` : ""}
+              ${album.album_url ? `<a class="button ghost" href="${escapeHtml(album.album_url)}" target="_blank" rel="noreferrer">Open album</a>` : ""}
+            </div>
+          </article>
+        `;
+      }).join("")
       : `<div class="empty gallery-empty">No event photo albums yet.</div>`;
   }
 
@@ -393,6 +418,7 @@ function renderAll() {
   renderGallery();
   renderSubmissions();
   renderMembers();
+  renderFeaturedArtistPicker();
   renderAnnouncements();
   renderAttendance();
   renderCommunity();
@@ -478,7 +504,7 @@ async function loadPrivateData() {
     const [pending, approved, members, announcements, attendance] = await Promise.all([
       client.from("artworks").select("*").eq("status", "pending").order("updated_at", { ascending: false }),
       client.from("artworks").select("*").eq("status", "approved").order("updated_at", { ascending: false }),
-      client.from("profiles").select("id,email,display_name,role,created_at").order("created_at", { ascending: false }),
+      client.from("profiles").select("id,email,display_name,role,bio,specialty,is_public,created_at").order("created_at", { ascending: false }),
       client.from("announcements").select("*").order("created_at", { ascending: false }),
       client.from("meeting_attendance").select("*").eq("meeting_id", 1).order("created_at", { ascending: false })
     ]);
@@ -498,14 +524,18 @@ async function loadPrivateData() {
   renderAll();
 }
 
-async function uploadArtworkImage(file) {
+async function uploadStorageImage(file, folder = "artwork") {
   if (!file) return null;
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${state.session.user.id}/${crypto.randomUUID()}.${ext}`;
+  const path = `${state.session.user.id}/${folder}/${crypto.randomUUID()}.${ext}`;
   const { error } = await client.storage.from("artwork").upload(path, file, { upsert: false });
   if (error) throw error;
   const { data } = client.storage.from("artwork").getPublicUrl(path);
   return data.publicUrl;
+}
+
+async function uploadArtworkImage(file) {
+  return uploadStorageImage(file, "artwork");
 }
 
 async function handleAuth(event) {
@@ -727,18 +757,29 @@ async function saveAlbum(event) {
   event.preventDefault();
   if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
   const form = event.currentTarget;
-  const { error } = await client.from("event_albums").insert({
-    title: form.title.value.trim(),
-    description: form.description.value.trim(),
-    cover_url: form.cover_url.value.trim(),
-    album_url: form.album_url.value.trim(),
-    created_by: state.session.user.id,
-    created_by_email: state.session.user.email || ""
-  });
-  if (error) return toast(error.message);
-  form.reset();
-  toast("Album added.");
-  await loadPublicData();
+  const files = [...(form.photos?.files || [])];
+  try {
+    const uploadedPhotos = [];
+    for (const file of files) {
+      uploadedPhotos.push(await uploadStorageImage(file, "albums"));
+    }
+    const coverUrl = form.cover_url.value.trim() || uploadedPhotos[0] || "";
+    const { error } = await client.from("event_albums").insert({
+      title: form.title.value.trim(),
+      description: form.description.value.trim(),
+      cover_url: coverUrl,
+      photo_urls: uploadedPhotos,
+      album_url: form.album_url.value.trim(),
+      created_by: state.session.user.id,
+      created_by_email: state.session.user.email || ""
+    });
+    if (error) return toast(error.message);
+    form.reset();
+    toast("Album added.");
+    await loadPublicData();
+  } catch (error) {
+    toast(error.message || "Could not upload album photos.");
+  }
 }
 
 async function saveMonthlyTheme(event) {
@@ -764,11 +805,14 @@ async function saveFeaturedArtist(event) {
   event.preventDefault();
   if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
   const form = event.currentTarget;
+  const member = state.members.find((item) => item.id === form.profile_id.value);
+  if (!member) return toast("Choose a member to feature.");
   await client.from("featured_artists").update({ is_active: false }).eq("is_active", true);
   const { error } = await client.from("featured_artists").insert({
-    name: form.name.value.trim(),
-    bio: form.bio.value.trim(),
-    specialty: form.specialty.value.trim(),
+    profile_id: member.id,
+    name: member.display_name || member.email || "Featured artist",
+    bio: form.bio.value.trim() || member.bio || "",
+    specialty: member.specialty || "featured artist",
     is_active: true,
     created_by: state.session.user.id,
     created_by_email: state.session.user.email || ""
