@@ -32,27 +32,30 @@
         <h1 class="page-title">Your submissions</h1>
         <p>Edit your own work any time. Every edit returns the piece to pending review.</p>
       </div>
-      <div class="panel">
-        <h3>Your profile</h3>
-        <form class="form profile-form" data-profile-form>
-          <label>Display name<input type="text" name="display_name" maxlength="80" /></label>
-          <label>Art focus<input type="text" name="specialty" maxlength="100" placeholder="digital, sculpting, painting..." /></label>
-          <label>Short bio<textarea name="bio" rows="3" maxlength="400"></textarea></label>
-          <label class="toggle-row"><input type="checkbox" name="is_public" /> Show my profile on the community page</label>
-          <button class="button primary full" type="submit">Save profile</button>
-        </form>
-      </div>
-      <div class="panel">
-        <form class="form" data-art-form>
-          <input type="hidden" name="artwork_id" />
-          <label>Piece title<input type="text" name="title" maxlength="80" required /></label>
-          <label>Artist name<input type="text" name="artist_name" maxlength="80" required /></label>
-          <label>Short description<textarea name="description" rows="4" maxlength="500"></textarea></label>
-          <label>Artwork image<input type="file" name="image" accept="image/png,image/jpeg,image/webp" /></label>
-          <button class="button primary full" type="submit">Submit for review</button>
-          <button class="button text full" type="button" data-cancel-edit hidden>Cancel edit</button>
-        </form>
-        <div class="submission-list" data-my-submissions></div>
+      <div class="member-studio-stack">
+        <div class="panel">
+          <h3>Your profile</h3>
+          <form class="form profile-form" data-profile-form>
+            <label>Display name<input type="text" name="display_name" maxlength="80" /></label>
+            <label>Art focus<input type="text" name="specialty" maxlength="100" placeholder="digital, sculpting, painting..." /></label>
+            <label>Short bio<textarea name="bio" rows="3" maxlength="400"></textarea></label>
+            <label class="toggle-row"><input type="checkbox" name="is_public" /> Show my profile on the community page</label>
+            <button class="button primary full" type="submit">Save profile</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h3>Your submission</h3>
+          <form class="form" data-art-form>
+            <input type="hidden" name="artwork_id" />
+            <label>Piece title<input type="text" name="title" maxlength="80" required /></label>
+            <label>Artist name<input type="text" name="artist_name" maxlength="80" required /></label>
+            <label>Short description<textarea name="description" rows="4" maxlength="500"></textarea></label>
+            <label>Artwork image<input type="file" name="image" accept="image/png,image/jpeg,image/webp" /></label>
+            <button class="button primary full" type="submit">Submit for review</button>
+            <button class="button text full" type="button" data-cancel-edit hidden>Cancel edit</button>
+          </form>
+          <div class="submission-list" data-my-submissions></div>
+        </div>
       </div>
     </main>
 
