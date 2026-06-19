@@ -717,6 +717,12 @@ textarea:focus {
   margin-top: 18px;
 }
 
+.album-upload-form {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
 .album-admin-item {
   border: 1px solid var(--line);
   border-radius: 4px;

@@ -427,7 +427,7 @@ on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'artwork'
-  and public.is_admin(auth.uid())
+  and public.current_user_is_admin()
 );
 
 -- Make the signed-in account with this email the first admin:

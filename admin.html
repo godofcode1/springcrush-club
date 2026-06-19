@@ -121,10 +121,13 @@
           <form class="form" data-album-form>
             <label>Album title<input type="text" name="title" maxlength="100" required /></label>
             <label>Description<textarea name="description" rows="3" maxlength="500"></textarea></label>
-            <label>Upload photos<input type="file" name="photos" accept="image/*" multiple /></label>
-            <label>Cover image URL<input type="url" name="cover_url" placeholder="https://..." /></label>
             <label>Album link<input type="url" name="album_url" placeholder="https://..." /></label>
-            <button class="button primary full" type="submit">Add album</button>
+            <button class="button primary full" type="submit">Create album</button>
+          </form>
+          <form class="form album-upload-form" data-album-photo-form>
+            <label>Choose album<select name="album_id" data-album-picker required></select></label>
+            <label>Add photos<input type="file" name="photos" accept="image/*" multiple required /></label>
+            <button class="button primary full" type="submit">Add photos to album</button>
           </form>
           <div class="album-manager" data-album-manager></div>
         </div>

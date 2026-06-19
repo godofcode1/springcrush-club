@@ -277,6 +277,18 @@ function renderFeaturedArtistPicker() {
 
 function renderAlbumManager() {
   const manager = $("[data-album-manager]");
+  const picker = $("[data-album-picker]");
+  if (picker) {
+    if (state.profile?.role !== "admin") {
+      picker.innerHTML = `<option value="">Admin access only</option>`;
+      picker.disabled = true;
+    } else {
+      picker.disabled = false;
+      picker.innerHTML = state.albums.length
+        ? `<option value="">Choose an album</option>${state.albums.map((album) => `<option value="${escapeHtml(album.id)}">${escapeHtml(album.title)}</option>`).join("")}`
+        : `<option value="">Create an album first</option>`;
+    }
+  }
   if (!manager) return;
   if (state.profile?.role !== "admin") {
     manager.innerHTML = `<div class="empty">Admin access only.</div>`;
@@ -794,25 +806,43 @@ async function saveAlbum(event) {
   event.preventDefault();
   if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
   const form = event.currentTarget;
+  const { error } = await client.from("event_albums").insert({
+    title: form.title.value.trim(),
+    description: form.description.value.trim(),
+    cover_url: "",
+    photo_urls: [],
+    album_url: form.album_url.value.trim(),
+    created_by: state.session.user.id,
+    created_by_email: state.session.user.email || ""
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Album created. Choose it below to add photos.");
+  await loadPublicData();
+}
+
+async function addPhotosToAlbum(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  const album = state.albums.find((item) => item.id === form.album_id.value);
+  if (!album) return toast("Choose an album first.");
   const files = [...(form.photos?.files || [])];
+  if (!files.length) return toast("Choose photos to upload.");
   try {
     const uploadedPhotos = [];
     for (const file of files) {
       uploadedPhotos.push(await uploadStorageImage(file, "albums"));
     }
-    const coverUrl = form.cover_url.value.trim() || uploadedPhotos[0] || "";
-    const { error } = await client.from("event_albums").insert({
-      title: form.title.value.trim(),
-      description: form.description.value.trim(),
-      cover_url: coverUrl,
-      photo_urls: uploadedPhotos,
-      album_url: form.album_url.value.trim(),
-      created_by: state.session.user.id,
-      created_by_email: state.session.user.email || ""
-    });
+    const currentPhotos = Array.isArray(album.photo_urls) ? album.photo_urls : [];
+    const nextPhotos = [...currentPhotos, ...uploadedPhotos];
+    const { error } = await client.from("event_albums").update({
+      photo_urls: nextPhotos,
+      cover_url: album.cover_url || uploadedPhotos[0] || ""
+    }).eq("id", album.id);
     if (error) return toast(error.message);
     form.reset();
-    toast("Album added.");
+    toast("Photos added to album.");
     await loadPublicData();
   } catch (error) {
     toast(error.message || "Could not upload album photos.");
@@ -1014,6 +1044,8 @@ function bindEvents() {
   if (settingsForm) settingsForm.addEventListener("submit", saveSettings);
   const albumForm = $("[data-album-form]");
   if (albumForm) albumForm.addEventListener("submit", saveAlbum);
+  const albumPhotoForm = $("[data-album-photo-form]");
+  if (albumPhotoForm) albumPhotoForm.addEventListener("submit", addPhotosToAlbum);
   const themeForm = $("[data-theme-form]");
   if (themeForm) themeForm.addEventListener("submit", saveMonthlyTheme);
   const featuredForm = $("[data-featured-form]");
