@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Springcrush Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script defer src="config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#gallery">Skip to gallery</a>
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Springcrush home">
+        <span class="brand-mark">SC</span>
+        <span>Springcrush</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#gallery">Gallery</a>
+        <a href="#submit">Submit</a>
+        <a href="#members">Members</a>
+        <a href="#admin" data-admin-link hidden>Admin</a>
+      </nav>
+      <button class="icon-button menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <main>
+      <section id="home" class="hero">
+        <div class="pixel-garden" aria-hidden="true">
+          <span class="pixel-flower flower-one"></span>
+          <span class="pixel-flower flower-two"></span>
+          <span class="pixel-flower flower-three"></span>
+          <span class="pixel-spark spark-one"></span>
+          <span class="pixel-spark spark-two"></span>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Pixel flowers, member art, fresh crushes</p>
+          <h1>Springcrush Club</h1>
+          <p class="hero-text">
+            A soft spring gallery where members submit art, admins approve it, and the wall blooms for everyone in real time.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#submit">Submit artwork</a>
+            <a class="button ghost" href="#gallery">View gallery</a>
+          </div>
+        </div>
+        <aside class="meeting-panel" aria-labelledby="meeting-title">
+          <p class="eyebrow">Next meeting</p>
+          <h2 id="meeting-title" data-meeting-theme>Loading schedule</h2>
+          <dl>
+            <div>
+              <dt>Date</dt>
+              <dd data-meeting-date>--</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd data-meeting-time>--</dd>
+            </div>
+            <div>
+              <dt>Room</dt>
+              <dd data-meeting-room>--</dd>
+            </div>
+          </dl>
+          <p data-meeting-notes class="meeting-notes"></p>
+        </aside>
+      </section>
+
+      <section class="announcement-band">
+        <div>
+          <p class="eyebrow">Latest note</p>
+          <h2 data-announcement-title>Welcome to the wall</h2>
+        </div>
+        <p data-announcement-body>Approved submissions appear here for everyone. Members can edit their own work, and edits go back to review.</p>
+      </section>
+
+      <section id="gallery" class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Public gallery</p>
+            <h2>Approved pieces</h2>
+          </div>
+          <span class="status-pill" data-live-status>Demo mode</span>
+        </div>
+        <div class="reference-strip" aria-label="Spring mood references">
+          <span>pixel daisy</span>
+          <span>dandelion</span>
+          <span>soft grass</span>
+          <span>tiny bouquet</span>
+        </div>
+        <div class="gallery-grid" data-gallery></div>
+      </section>
+
+      <section id="submit" class="section split">
+        <div class="section-copy">
+          <p class="eyebrow">For members</p>
+          <h2>Send something to the wall</h2>
+          <p>Sign up or log in, upload your piece, and it will stay pending until an admin approves it.</p>
+        </div>
+        <div class="panel">
+          <div class="tabs" role="tablist" aria-label="Authentication">
+            <button class="tab active" type="button" data-auth-mode="signin">Log in</button>
+            <button class="tab" type="button" data-auth-mode="signup">Sign up</button>
+          </div>
+          <form class="form" data-auth-form>
+            <label>
+              Email
+              <input type="email" name="email" autocomplete="email" required />
+            </label>
+            <label>
+              Password
+              <input type="password" name="password" autocomplete="current-password" minlength="6" required />
+            </label>
+            <label data-name-field hidden>
+              Display name
+              <input type="text" name="display_name" autocomplete="name" />
+            </label>
+            <button class="button primary full" type="submit" data-auth-button>Log in</button>
+          </form>
+          <div class="signed-in" data-session-box hidden>
+            <p>Signed in as <strong data-user-email></strong></p>
+            <button class="button ghost" type="button" data-signout>Log out</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="members" class="section split">
+        <div class="section-copy">
+          <p class="eyebrow">Member studio</p>
+          <h2>Your submissions</h2>
+          <p>Edit your own work any time. Every edit returns the piece to pending review.</p>
+        </div>
+        <div class="panel">
+          <form class="form" data-art-form>
+            <input type="hidden" name="artwork_id" />
+            <label>
+              Piece title
+              <input type="text" name="title" maxlength="80" required />
+            </label>
+            <label>
+              Artist name
+              <input type="text" name="artist_name" maxlength="80" required />
+            </label>
+            <label>
+              Short description
+              <textarea name="description" rows="4" maxlength="500"></textarea>
+            </label>
+            <label>
+              Artwork image
+              <input type="file" name="image" accept="image/png,image/jpeg,image/webp" />
+            </label>
+            <button class="button primary full" type="submit">Submit for review</button>
+            <button class="button text full" type="button" data-cancel-edit hidden>Cancel edit</button>
+          </form>
+          <div class="submission-list" data-my-submissions></div>
+        </div>
+      </section>
+
+      <section id="admin" class="section admin-section" data-admin-section hidden>
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Admin desk</p>
+            <h2>Moderation and schedule</h2>
+          </div>
+        </div>
+        <div class="admin-grid">
+          <div class="panel">
+            <h3>Pending artwork</h3>
+            <div class="submission-list" data-pending-list></div>
+          </div>
+          <div class="panel">
+            <h3>Meeting schedule</h3>
+            <form class="form" data-meeting-form>
+              <label>
+                Theme
+                <input type="text" name="theme" maxlength="100" required />
+              </label>
+              <label>
+                Date
+                <input type="date" name="meeting_date" required />
+              </label>
+              <label>
+                Time
+                <input type="time" name="meeting_time" required />
+              </label>
+              <label>
+                Room
+                <input type="text" name="room" maxlength="100" required />
+              </label>
+              <label>
+                Notes
+                <textarea name="notes" rows="3" maxlength="400"></textarea>
+              </label>
+              <button class="button primary full" type="submit">Update meeting</button>
+            </form>
+          </div>
+          <div class="panel">
+            <h3>Announcement</h3>
+            <form class="form" data-announcement-form>
+              <label>
+                Title
+                <input type="text" name="title" maxlength="100" required />
+              </label>
+              <label>
+                Message
+                <textarea name="body" rows="4" maxlength="500" required></textarea>
+              </label>
+              <button class="button primary full" type="submit">Publish announcement</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" data-toast role="status" aria-live="polite"></div>
+  </body>
+</html>
