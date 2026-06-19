@@ -38,15 +38,32 @@ create table if not exists public.meetings (
   room text not null,
   notes text default '',
   updated_by uuid references auth.users(id),
+  updated_by_email text default '',
   updated_at timestamptz not null default now()
 );
+
+alter table public.meetings add column if not exists updated_by_email text default '';
 
 create table if not exists public.announcements (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   body text not null,
   created_by uuid references auth.users(id),
+  created_by_email text default '',
+  is_active boolean not null default true,
+  archived_at timestamptz,
   created_at timestamptz not null default now()
+);
+
+alter table public.announcements add column if not exists created_by_email text default '';
+alter table public.announcements add column if not exists is_active boolean not null default true;
+alter table public.announcements add column if not exists archived_at timestamptz;
+
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null default 'null'::jsonb,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now()
 );
 
 create or replace function public.current_user_is_admin()
@@ -128,6 +145,7 @@ alter table public.profiles enable row level security;
 alter table public.artworks enable row level security;
 alter table public.meetings enable row level security;
 alter table public.announcements enable row level security;
+alter table public.site_settings enable row level security;
 
 drop policy if exists "Profiles are readable by signed-in users" on public.profiles;
 create policy "Profiles are readable by signed-in users"
@@ -181,6 +199,12 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
+drop policy if exists "Admins can delete artwork" on public.artworks;
+create policy "Admins can delete artwork"
+on public.artworks for delete
+to authenticated
+using (public.current_user_is_admin());
+
 drop policy if exists "Meetings are public" on public.meetings;
 create policy "Meetings are public"
 on public.meetings for select
@@ -194,11 +218,30 @@ to authenticated
 using (public.current_user_is_admin())
 with check (public.current_user_is_admin());
 
+drop policy if exists "Admins can delete meetings" on public.meetings;
+create policy "Admins can delete meetings"
+on public.meetings for delete
+to authenticated
+using (public.current_user_is_admin());
+
 drop policy if exists "Announcements are public" on public.announcements;
 create policy "Announcements are public"
 on public.announcements for select
 to anon, authenticated
 using (true);
+
+drop policy if exists "Site settings are public" on public.site_settings;
+create policy "Site settings are public"
+on public.site_settings for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can manage site settings" on public.site_settings;
+create policy "Admins can manage site settings"
+on public.site_settings for all
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
 
 drop policy if exists "Admins can publish announcements" on public.announcements;
 create policy "Admins can publish announcements"
@@ -206,9 +249,20 @@ on public.announcements for insert
 to authenticated
 with check (public.current_user_is_admin());
 
+drop policy if exists "Admins can archive announcements" on public.announcements;
+create policy "Admins can archive announcements"
+on public.announcements for update
+to authenticated
+using (public.current_user_is_admin())
+with check (public.current_user_is_admin());
+
 insert into public.meetings (id, theme, meeting_date, meeting_time, room, notes)
 values (1, 'Open studio + first submissions', current_date + 7, '16:30', 'Art room', 'Bring a sketch, photo, or unfinished idea.')
 on conflict (id) do nothing;
+
+insert into public.site_settings (key, value)
+values ('animations_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
 
 -- Storage policy for a public bucket named "artwork".
 -- Keep the bucket itself public for image URLs, but do not add a broad SELECT
@@ -232,3 +286,4 @@ with check (
 alter publication supabase_realtime add table public.artworks;
 alter publication supabase_realtime add table public.meetings;
 alter publication supabase_realtime add table public.announcements;
+alter publication supabase_realtime add table public.site_settings;

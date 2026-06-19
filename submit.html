@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Submit | Springcrush Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script defer src="config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#submit">Skip to submit</a>
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Springcrush home"><span class="brand-mark">SC</span><span>Springcrush</span></a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="gallery.html">Gallery</a>
+        <a href="submit.html">Submit</a>
+        <a href="members.html">Members</a>
+        <a href="admin.html" data-admin-link hidden>Admin</a>
+      </nav>
+      <button class="icon-button menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="false"><span aria-hidden="true"></span></button>
+    </header>
+
+    <main id="submit" class="section split auth-page">
+      <div class="section-copy auth-intro">
+        <p class="eyebrow">For members</p>
+        <h1 class="page-title">Join or log in</h1>
+        <p>Use one account for submissions, member-only tools, and admin access if you are promoted later.</p>
+        <div class="picnic-note">
+          <span>1</span>
+          <p>Create your account or log in.</p>
+          <span>2</span>
+          <p>Open the member studio.</p>
+          <span>3</span>
+          <p>Upload work for admin review.</p>
+        </div>
+      </div>
+      <div class="panel auth-card">
+        <div class="tabs" role="tablist" aria-label="Authentication">
+          <button class="tab active" type="button" data-auth-mode="signin">Log in</button>
+          <button class="tab" type="button" data-auth-mode="signup">Sign up</button>
+        </div>
+        <form class="form" data-auth-form>
+          <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+          <label>Password<input type="password" name="password" autocomplete="current-password" minlength="6" required /></label>
+          <label data-name-field hidden>Display name<input type="text" name="display_name" autocomplete="name" /></label>
+          <button class="button primary full" type="submit" data-auth-button>Log in</button>
+        </form>
+        <div class="signed-in" data-session-box hidden>
+          <p>Signed in as <strong data-user-email></strong></p>
+          <a class="button primary" href="members.html">Open studio</a>
+          <button class="button ghost" type="button" data-signout>Log out</button>
+        </div>
+      </div>
+    </main>
+
+    <div class="toast" data-toast role="status" aria-live="polite"></div>
+  </body>
+</html>
