@@ -1,18 +1,17 @@
 :root {
-  --ink: #27352a;
-  --muted: #687465;
-  --paper: #fffdf2;
-  --cream: #fff7d8;
-  --petal: #ffc6d4;
-  --petal-strong: #f36f9a;
-  --leaf: #4d8a4c;
-  --leaf-dark: #285c34;
-  --mint: #cdeecf;
-  --sky: #bde8f6;
-  --sun: #ffd15c;
-  --lavender: #cdb8ff;
-  --line: rgba(39, 53, 42, 0.16);
-  --shadow: 0 18px 50px rgba(55, 95, 62, 0.16);
+  --ink: #273026;
+  --muted: #68705f;
+  --paper: #fffaf0;
+  --paper-deep: #f4ecd9;
+  --clay: #bf6f52;
+  --rose: #d9838f;
+  --ochre: #d7a73d;
+  --leaf: #5f8c55;
+  --leaf-dark: #2f5b37;
+  --sage: #dfe8cf;
+  --water: #a9d2ca;
+  --line: rgba(39, 48, 38, 0.16);
+  --shadow: 0 18px 50px rgba(72, 88, 58, 0.16);
   color-scheme: light;
 }
 
@@ -27,10 +26,9 @@ html {
 body {
   margin: 0;
   background:
-    linear-gradient(90deg, rgba(77, 138, 76, 0.05) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(77, 138, 76, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 12px 12px, rgba(95, 140, 85, 0.06) 1px, transparent 1.5px),
     var(--paper);
-  background-size: 18px 18px;
+  background-size: 22px 22px;
   color: var(--ink);
   font-family: "DM Sans", system-ui, sans-serif;
   overflow-x: clip;
@@ -104,7 +102,7 @@ textarea:focus-visible {
   aspect-ratio: 1;
   background: var(--leaf-dark);
   border-radius: 50%;
-  box-shadow: 0 0 0 4px var(--mint);
+  box-shadow: 0 0 0 4px var(--sage);
   color: white;
   display: inline-flex;
   font-size: 0.85rem;
@@ -172,8 +170,8 @@ textarea:focus-visible {
 
 .hero {
   background:
-    linear-gradient(90deg, rgba(255, 253, 242, 0.96), rgba(255, 253, 242, 0.74)),
-    url("https://images.unsplash.com/photo-1522748906645-95d8adfd52c7?auto=format&fit=crop&w=1800&q=80") center/cover;
+    linear-gradient(90deg, rgba(255, 250, 240, 0.97), rgba(255, 250, 240, 0.72)),
+    url("https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1800&q=80") center/cover;
   color: var(--ink);
   display: grid;
   gap: clamp(28px, 6vw, 80px);
@@ -263,8 +261,8 @@ h3 {
 }
 
 .button.primary {
-  background: var(--petal-strong);
-  box-shadow: 0 12px 24px rgba(243, 111, 154, 0.28);
+  background: var(--clay);
+  box-shadow: 0 12px 24px rgba(191, 111, 82, 0.28);
   color: white;
 }
 
@@ -286,7 +284,7 @@ h3 {
 .meeting-panel,
 .panel,
 .art-card {
-  background: rgba(255, 253, 242, 0.96);
+  background: rgba(255, 250, 240, 0.96);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
@@ -326,8 +324,8 @@ h3 {
 .announcement-band {
   align-items: center;
   background:
-    linear-gradient(135deg, rgba(205, 238, 207, 0.94), rgba(255, 247, 216, 0.94)),
-    var(--mint);
+    linear-gradient(135deg, rgba(223, 232, 207, 0.96), rgba(244, 236, 217, 0.96)),
+    var(--sage);
   color: var(--ink);
   display: grid;
   gap: 22px;
@@ -360,7 +358,7 @@ h3 {
 }
 
 .status-pill {
-  background: var(--sun);
+  background: var(--water);
   border-radius: 999px;
   color: var(--ink);
   font-size: 0.85rem;
@@ -492,8 +490,8 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--petal-strong);
-  box-shadow: 0 0 0 4px rgba(243, 111, 154, 0.16);
+  border-color: var(--clay);
+  box-shadow: 0 0 0 4px rgba(191, 111, 82, 0.16);
 }
 
 .signed-in {
@@ -534,7 +532,7 @@ textarea:focus {
 .member-avatar {
   align-items: center;
   aspect-ratio: 1;
-  background: var(--mint);
+  background: var(--sage);
   border-radius: 6px;
   color: var(--leaf-dark);
   display: inline-flex;
@@ -615,78 +613,113 @@ textarea:focus {
   padding: 18px;
 }
 
-.pixel-garden {
+.nature-garden {
   inset: 0;
   pointer-events: none;
   position: absolute;
 }
 
-.pixel-flower,
-.pixel-spark {
-  image-rendering: pixelated;
+.pressed-bloom,
+.leaf-sprig,
+.paint-swatch {
   position: absolute;
 }
 
-.pixel-flower {
-  height: 12px;
-  width: 12px;
+.pressed-bloom {
+  background:
+    radial-gradient(circle at 50% 50%, var(--ochre) 0 12%, transparent 13%),
+    radial-gradient(ellipse at 50% 18%, rgba(217, 131, 143, 0.72) 0 22%, transparent 23%),
+    radial-gradient(ellipse at 82% 50%, rgba(217, 131, 143, 0.72) 0 22%, transparent 23%),
+    radial-gradient(ellipse at 50% 82%, rgba(217, 131, 143, 0.72) 0 22%, transparent 23%),
+    radial-gradient(ellipse at 18% 50%, rgba(217, 131, 143, 0.72) 0 22%, transparent 23%);
+  border: 1px solid rgba(47, 91, 55, 0.1);
+  border-radius: 50%;
+  filter: saturate(0.95);
+  height: 132px;
+  opacity: 0.72;
+  width: 132px;
 }
 
-.pixel-flower::before {
-  background: var(--petal);
-  box-shadow:
-    12px 0 var(--petal),
-    24px 0 var(--petal),
-    0 12px var(--petal),
-    12px 12px var(--sun),
-    24px 12px var(--petal),
-    12px 24px var(--petal),
-    12px 36px var(--leaf),
-    12px 48px var(--leaf),
-    0 48px var(--leaf),
-    24px 48px var(--leaf);
+.bloom-one {
+  right: 7%;
+  top: 13%;
+  transform: rotate(10deg);
+}
+
+.bloom-two {
+  bottom: 8%;
+  left: 7%;
+  transform: scale(0.74) rotate(-18deg);
+}
+
+.leaf-sprig {
+  background: linear-gradient(var(--leaf-dark), var(--leaf-dark)) center/2px 100% no-repeat;
+  height: 210px;
+  opacity: 0.46;
+  width: 110px;
+}
+
+.leaf-sprig::before,
+.leaf-sprig::after {
+  background: rgba(95, 140, 85, 0.62);
+  border-radius: 90% 0 90% 0;
   content: "";
-  display: block;
-  height: 12px;
-  width: 12px;
+  height: 62px;
+  position: absolute;
+  width: 34px;
 }
 
-.flower-one {
-  right: 9%;
-  top: 18%;
-  transform: scale(2.2) rotate(4deg);
-}
-
-.flower-two {
-  bottom: 18%;
-  right: 34%;
-  transform: scale(1.55) rotate(-8deg);
-}
-
-.flower-three {
-  bottom: 9%;
-  left: 8%;
-  transform: scale(1.85) rotate(8deg);
-}
-
-.pixel-spark {
-  background: var(--lavender);
+.leaf-sprig::before {
   box-shadow:
-    10px 0 var(--lavender),
-    0 10px var(--lavender),
-    10px 10px var(--petal-strong);
-  height: 10px;
-  width: 10px;
+    22px 48px 0 rgba(95, 140, 85, 0.5),
+    -8px 102px 0 rgba(95, 140, 85, 0.42);
+  left: 50px;
+  top: 18px;
+  transform: rotate(34deg);
 }
 
-.spark-one {
-  right: 44%;
-  top: 22%;
+.leaf-sprig::after {
+  box-shadow:
+    -22px 48px 0 rgba(95, 140, 85, 0.48),
+    8px 102px 0 rgba(95, 140, 85, 0.38);
+  left: 26px;
+  top: 40px;
+  transform: rotate(-128deg);
 }
 
-.spark-two {
-  bottom: 28%;
-  right: 12%;
+.sprig-one {
+  right: 30%;
+  top: 12%;
+  transform: rotate(-22deg);
+}
+
+.sprig-two {
+  bottom: 5%;
+  right: 10%;
+  transform: scale(0.78) rotate(22deg);
+}
+
+.paint-swatch {
+  border: 1px solid rgba(39, 48, 38, 0.12);
+  border-radius: 47% 53% 44% 56%;
+  filter: blur(0.2px);
+  height: 96px;
+  opacity: 0.5;
+  width: 148px;
+}
+
+.swatch-one {
+  background: rgba(169, 210, 202, 0.72);
+  right: 16%;
+  top: 46%;
+  transform: rotate(-10deg);
+}
+
+.swatch-two {
+  background: rgba(215, 167, 61, 0.44);
+  bottom: 22%;
+  left: 26%;
+  transform: rotate(8deg);
 }
 
 @media (max-width: 860px) {
@@ -769,15 +802,16 @@ textarea:focus {
     width: 100%;
   }
 
-  .flower-one {
+  .bloom-one {
     opacity: 0.6;
     right: 12%;
     top: 10%;
-    transform: scale(1.35) rotate(4deg);
+    transform: scale(0.58) rotate(4deg);
   }
 
-  .flower-two,
-  .spark-one {
+  .bloom-two,
+  .sprig-one,
+  .swatch-two {
     display: none;
   }
 
