@@ -210,13 +210,10 @@ insert into public.meetings (id, theme, meeting_date, meeting_time, room, notes)
 values (1, 'Open studio + first submissions', current_date + 7, '16:30', 'Art room', 'Bring a sketch, photo, or unfinished idea.')
 on conflict (id) do nothing;
 
--- Storage policies for a public bucket named "artwork".
+-- Storage policy for a public bucket named "artwork".
+-- Keep the bucket itself public for image URLs, but do not add a broad SELECT
+-- policy on storage.objects because that lets clients list every file.
 drop policy if exists "Artwork images are public" on storage.objects;
-create policy "Artwork images are public"
-on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'artwork');
-
 drop policy if exists "Members upload artwork to their folder" on storage.objects;
 create policy "Members upload artwork to their folder"
 on storage.objects for insert
