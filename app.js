@@ -494,6 +494,27 @@ function renderSettings() {
   if (toggle) toggle.checked = Boolean(state.settings.animations_enabled);
 }
 
+function enforceAdminControls() {
+  if (state.profile?.role !== "admin") {
+    $$('[data-delete-album]').forEach((btn) => btn.remove());
+    $$('[data-delete-competition]').forEach((btn) => btn.remove());
+  }
+}
+
+function renderCompetitionCarousel() {
+  const carouselEl = $("[data-competition-carousel]");
+  const active = state.competitions.find((c) => c.is_active) || null;
+  if (!carouselEl) return;
+  const entries = active ? state.competitionEntries.filter((e) => e.competition_id === active.id) : [];
+  if (!entries.length) {
+    carouselEl.innerHTML = `<div class="empty">No entries yet.</div>`;
+    return;
+  }
+  // render images inside carousel
+  carouselEl.dataset.currentIndex = carouselEl.dataset.currentIndex || '0';
+  carouselEl.innerHTML = `${entries.map((entry, idx) => `<img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" data-index="${idx}" ${idx === 0 ? '' : 'hidden'} loading="lazy">`).join("")}`;
+}
+
 function renderAll() {
   setLiveStatus();
   renderAuth();
@@ -1268,6 +1289,34 @@ function bindEvents() {
         const prev = (current - 1 + imgs.length) % imgs.length;
         imgs.forEach((img) => img.hidden = img.dataset.index !== String(prev));
         carousel.dataset.currentIndex = String(prev);
+      }
+    }
+
+    // competition carousel controls
+    const compNext = event.target.closest('[data-competition-next]');
+    const compPrev = event.target.closest('[data-competition-prev]');
+    if (compNext) {
+      const carousel = document.querySelector('[data-competition-carousel]');
+      if (carousel) {
+        const imgs = [...carousel.querySelectorAll('img')];
+        if (imgs.length) {
+          const current = parseInt(carousel.dataset.currentIndex || '0', 10) || 0;
+          const next = (current + 1) % imgs.length;
+          imgs.forEach((img) => img.hidden = img.dataset.index !== String(next));
+          carousel.dataset.currentIndex = String(next);
+        }
+      }
+    }
+    if (compPrev) {
+      const carousel = document.querySelector('[data-competition-carousel]');
+      if (carousel) {
+        const imgs = [...carousel.querySelectorAll('img')];
+        if (imgs.length) {
+          const current = parseInt(carousel.dataset.currentIndex || '0', 10) || 0;
+          const prev = (current - 1 + imgs.length) % imgs.length;
+          imgs.forEach((img) => img.hidden = img.dataset.index !== String(prev));
+          carousel.dataset.currentIndex = String(prev);
+        }
       }
     }
 
