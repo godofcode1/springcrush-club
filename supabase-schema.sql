@@ -490,3 +490,132 @@ begin
   alter publication supabase_realtime add table public.artwork_comments;
 exception when duplicate_object then null;
 end $$;
+
+-- ======================================================
+-- Competitions: contests, entries and votes
+-- ======================================================
+
+create table if not exists public.competitions (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  theme text default '',
+  description text default '',
+  is_active boolean not null default true,
+  created_by uuid references auth.users(id),
+  created_by_email text default '',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.competition_entries (
+  id uuid primary key default gen_random_uuid(),
+  competition_id uuid not null references public.competitions(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  artist_name text not null,
+  image_url text not null,
+  created_at timestamptz not null default now(),
+  -- one entry per user per competition
+  unique (competition_id, user_id)
+);
+
+create table if not exists public.competition_votes (
+  id uuid primary key default gen_random_uuid(),
+  entry_id uuid not null references public.competition_entries(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  -- one vote record per user per entry
+  unique (entry_id, user_id)
+);
+
+-- Enable RLS
+alter table public.competitions enable row level security;
+alter table public.competition_entries enable row level security;
+alter table public.competition_votes enable row level security;
+
+-- Policies: competitions (public read, admins manage)
+drop policy if exists "Competitions are public" on public.competitions;
+create policy "Competitions are public"
+  on public.competitions for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "Admins manage competitions" on public.competitions;
+create policy "Admins manage competitions"
+  on public.competitions for all
+  to authenticated
+  using (public.current_user_is_admin())
+  with check (public.current_user_is_admin());
+
+-- Policies: entries (public read, members submit, owners/admins delete/update)
+drop policy if exists "Competition entries are public" on public.competition_entries;
+create policy "Competition entries are public"
+  on public.competition_entries for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "Members can submit competition entries" on public.competition_entries;
+create policy "Members can submit competition entries"
+  on public.competition_entries for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "Owners or admins can delete entries" on public.competition_entries;
+create policy "Owners or admins can delete entries"
+  on public.competition_entries for delete
+  to authenticated
+  using (user_id = auth.uid() or public.current_user_is_admin());
+
+-- Owners can update their own entries (limited to their fields)
+drop policy if exists "Owners can update own entries" on public.competition_entries;
+create policy "Owners can update own entries"
+  on public.competition_entries for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- Policies: votes (public read, authenticated insert/delete by owner)
+drop policy if exists "Competition votes are public" on public.competition_votes;
+create policy "Competition votes are public"
+  on public.competition_votes for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "Members can vote" on public.competition_votes;
+create policy "Members can vote"
+  on public.competition_votes for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "Members can remove own vote or admins" on public.competition_votes;
+create policy "Members can remove own vote or admins"
+  on public.competition_votes for delete
+  to authenticated
+  using (user_id = auth.uid() or public.current_user_is_admin());
+
+-- Realtime publication for competitions
+do $$
+begin
+  alter publication supabase_realtime add table public.competitions;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.competition_entries;
+exception when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.competition_votes;
+exception when duplicate_object then null;
+end $$;
+
+-- Optional: sample data for testing (uncomment and edit before use)
+-- insert into public.competitions (title, theme, description, is_active, created_by_email)
+-- values ('June Picnic Contest', 'Picnic', 'Create a piece inspired by an outdoor picnic.', true, 'admin@example.com');
+
+-- Make a user admin (replace email)
+-- update public.profiles set role = 'admin' where id = (
+--   select id from auth.users where email = 'you@example.com'
+-- );

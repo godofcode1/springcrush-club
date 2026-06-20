@@ -24,6 +24,9 @@ const state = {
   featuredArtist: null,
   profiles: [],
   comments: [],
+  competitions: [],
+  competitionEntries: [],
+  competitionVotes: [],
   settings: {
     animations_enabled: true
   },
@@ -48,6 +51,31 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+// Compress an image client-side to reduce Supabase storage usage.
+async function compressImage(file, maxWidth = 1400, quality = 0.78) {
+  if (!file || !file.type?.startsWith?.("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const ratio = Math.min(1, maxWidth / bitmap.width);
+    const width = Math.max(1, Math.round(bitmap.width * ratio));
+    const height = Math.max(1, Math.round(bitmap.height * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const mime = "image/jpeg";
+    const blob = await new Promise((res) => canvas.toBlob(res, mime, quality));
+    if (!blob) return file;
+    const name = (file.name || "image").replace(/\.[^/.]+$/, "") + ".jpg";
+    return new File([blob], name, { type: mime });
+  } catch (err) {
+    // If compression fails, fall back to original file.
+    console.warn("Image compression failed", err);
+    return file;
+  }
 }
 
 function formatDate(value) {
@@ -369,14 +397,22 @@ function renderCommunity() {
       ? state.albums.map((album) => {
         const photos = Array.isArray(album.photo_urls) ? album.photo_urls.filter(Boolean) : [];
         const cover = album.cover_url || photos[0] || demoImages[0];
+        const photoSet = [...new Set([cover, ...photos].filter(Boolean))];
         return `
-          <article class="art-card album-card">
-            <img src="${escapeHtml(cover)}" alt="${escapeHtml(album.title)}" loading="lazy">
+          <article class="art-card album-card" data-album-id="${escapeHtml(album.id)}">
+            <div class="album-carousel" data-album-carousel="${escapeHtml(album.id)}" data-current-index="0">
+              ${photoSet.map((photo, idx) => `<img src="${escapeHtml(photo)}" alt="${escapeHtml(album.title)} photo" loading="lazy" data-index="${idx}" ${idx === 0 ? "" : "hidden"}>`).join("")}
+              <div class="album-nav">
+                <button class="small-button light" type="button" data-album-prev="${escapeHtml(album.id)}" aria-label="Previous photo">‹</button>
+                <button class="small-button light" type="button" data-album-next="${escapeHtml(album.id)}" aria-label="Next photo">›</button>
+              </div>
+            </div>
             <div class="art-card-body">
               <h3>${escapeHtml(album.title)}</h3>
               <p>${escapeHtml(album.description || "")}</p>
-              ${photos.length ? `<div class="album-strip">${photos.slice(0, 6).map((photo) => `<img src="${escapeHtml(photo)}" alt="${escapeHtml(album.title)} photo" loading="lazy">`).join("")}</div>` : ""}
+              ${photoSet.length ? `<div class="album-strip" aria-hidden="true">${photoSet.slice(0, 6).map((photo) => `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`).join("")}</div>` : ""}
               ${album.album_url ? `<a class="button ghost" href="${escapeHtml(album.album_url)}" target="_blank" rel="noreferrer">Open album</a>` : ""}
+              ${state.profile?.role === "admin" ? `<button class="small-button danger" type="button" data-delete-album="${escapeHtml(album.id)}">Delete album</button>` : ""}
             </div>
           </article>
         `;
@@ -471,6 +507,7 @@ function renderAll() {
   renderAnnouncements();
   renderAttendance();
   renderCommunity();
+  renderCompetitions();
   renderSettings();
 }
 
@@ -489,7 +526,7 @@ async function loadPublicData() {
     return;
   }
 
-  const [art, meeting, announcement, animationSetting, albums, monthlyTheme, featuredArtist, profiles, comments] = await Promise.all([
+  const [art, meeting, announcement, animationSetting, albums, monthlyTheme, featuredArtist, profiles, comments, competitions, competitionEntries, competitionVotes] = await Promise.all([
     client.from("artworks").select("*").eq("status", "approved").order("created_at", { ascending: false }),
     client.from("meetings").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     client.from("announcements").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -498,10 +535,13 @@ async function loadPublicData() {
     client.from("monthly_themes").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     client.from("featured_artists").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     client.from("profiles").select("id,email,display_name,bio,specialty,is_public").eq("is_public", true).order("display_name", { ascending: true }),
-    client.from("artwork_comments").select("*").order("created_at", { ascending: true })
+    client.from("artwork_comments").select("*").order("created_at", { ascending: true }),
+    client.from("competitions").select("*").order("created_at", { ascending: false }),
+    client.from("competition_entries").select("*").order("created_at", { ascending: false }),
+    client.from("competition_votes").select("*")
   ]);
 
-  const setupError = [art.error, meeting.error, announcement.error, animationSetting.error, albums.error, monthlyTheme.error, featuredArtist.error, profiles.error, comments.error].find((error) =>
+  const setupError = [art.error, meeting.error, announcement.error, animationSetting.error, albums.error, monthlyTheme.error, featuredArtist.error, profiles.error, comments.error, competitions.error, competitionEntries.error, competitionVotes.error].find((error) =>
     error?.message?.includes("schema cache") || error?.code === "PGRST205"
   );
   if (setupError) {
@@ -515,6 +555,9 @@ async function loadPublicData() {
     state.featuredArtist = null;
     state.profiles = [];
     state.comments = [];
+    state.competitions = [];
+    state.competitionEntries = [];
+    state.competitionVotes = [];
     renderAll();
     toast(state.backendIssue);
     return;
@@ -531,6 +574,9 @@ async function loadPublicData() {
   state.featuredArtist = featuredArtist.data || null;
   state.profiles = profiles.data || [];
   state.comments = comments.data || [];
+  state.competitions = competitions.data || [];
+  state.competitionEntries = competitionEntries.data || [];
+  state.competitionVotes = competitionVotes.data || [];
   renderAll();
 }
 
@@ -575,12 +621,18 @@ async function loadPrivateData() {
 
 async function uploadStorageImage(file, folder = "artwork") {
   if (!file) return null;
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${state.session.user.id}/${folder}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await client.storage.from("artwork").upload(path, file, { upsert: false });
-  if (error) throw error;
-  const { data } = client.storage.from("artwork").getPublicUrl(path);
-  return data.publicUrl;
+  try {
+    // compress to save Supabase storage
+    const compressed = await compressImage(file, 1400, 0.78);
+    const ext = compressed.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${state.session.user.id}/${folder}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await client.storage.from("artwork").upload(path, compressed, { upsert: false });
+    if (error) throw error;
+    const { data } = client.storage.from("artwork").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (err) {
+    throw err;
+  }
 }
 
 async function uploadArtworkImage(file) {
@@ -668,6 +720,27 @@ async function deleteArtwork(id) {
   if (error) return toast(error.message);
   toast("Artwork removed from the gallery.");
   await Promise.all([loadPublicData(), loadPrivateData()]);
+}
+
+async function deleteAlbum(albumId) {
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const album = state.albums.find((a) => a.id === albumId);
+  const { error } = await client.from("event_albums").delete().eq("id", albumId);
+  if (error) return toast(error.message);
+
+  // remove photos from storage if possible
+  try {
+    if (album && Array.isArray(album.photo_urls) && album.photo_urls.length) {
+      const paths = album.photo_urls.map(storagePathFromPublicUrl).filter(Boolean);
+      if (paths.length) await client.storage.from("artwork").remove(paths);
+    }
+  } catch (err) {
+    // non-fatal: storage removal failed
+    console.warn("Failed to remove album photos from storage", err);
+  }
+
+  toast("Album deleted.");
+  await loadPublicData();
 }
 
 function editArtwork(id) {
@@ -919,6 +992,120 @@ async function saveFeaturedArtist(event) {
   await loadPublicData();
 }
 
+// --- Competitions: admin can create competitions; members can submit entries and vote ---
+function renderCompetitions() {
+  const feat = $("[data-competitions]");
+  if (feat) {
+    const active = state.competitions.find((c) => c.is_active) || null;
+    feat.innerHTML = active
+      ? `<h2>${escapeHtml(active.title)}</h2><p>${escapeHtml(active.description || "")}</p><p><strong>Theme:</strong> ${escapeHtml(active.theme || "")}</p>${state.profile?.role === "admin" ? `<div class="moderation-actions"><button class="small-button danger" type="button" data-delete-competition="${escapeHtml(active.id)}">Delete competition</button></div>` : ""}`
+      : (state.profile?.role === "admin" ? `<form data-competition-form class="form album-upload-form"><label>Title<input name="title" required></label><label>Theme<input name="theme"></label><label>Description<textarea name="description"></textarea></label><button class="button" type="submit">Create competition</button></form>` : `<p>No active competition.</p>`);
+  }
+
+  const area = $("[data-competition-area]");
+  if (!area) return;
+  if (!state.competitions.length) {
+    area.innerHTML = `<div class="empty">No competitions yet.</div>`;
+    return;
+  }
+  area.innerHTML = state.competitions.map((comp) => {
+    const entries = state.competitionEntries.filter((e) => e.competition_id === comp.id);
+    return `
+      <article class="art-card album-card">
+        <div class="art-card-body">
+          <h3>${escapeHtml(comp.title)}</h3>
+          <p>${escapeHtml(comp.description || "")}</p>
+          <p class="eyebrow">Theme: ${escapeHtml(comp.theme || "")}</p>
+          ${comp.is_active ? `<form data-competition-entry-form data-comp-id="${escapeHtml(comp.id)}" class="album-upload-form"><label>Title<input name="title" required></label><label>Your name<input name="artist_name" value="${escapeHtml(state.profile?.display_name || state.session?.user?.email?.split("@")[0] || "")}" required></label><label>Image<input name="image" type="file" accept="image/*" required></label><button class="button" type="submit">Submit entry</button></form>` : `<div class="empty">Competition is closed.</div>`}
+          ${entries.length ? `<div class="gallery-grid">${entries.map((entry) => {
+            const voteCount = state.competitionVotes.filter((v) => v.entry_id === entry.id).length;
+            const userVoted = state.competitionVotes.some((v) => v.entry_id === entry.id && v.user_id === state.session?.user?.id);
+            return `
+              <article class="submission-item">
+                <img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}">
+                <div>
+                  <h4>${escapeHtml(entry.title)}</h4>
+                  <p>by ${escapeHtml(entry.artist_name)}</p>
+                  <p>Votes: ${voteCount}</p>
+                </div>
+                <div class="submission-controls">${state.session ? `<button class="small-button" type="button" data-vote-entry="${escapeHtml(entry.id)}">${userVoted ? 'Unvote' : 'Vote'}</button>` : ''}</div>
+              </article>
+            `;
+          }).join("")}</div>` : `<div class="empty">No entries yet.</div>`}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+async function saveCompetition(event) {
+  event.preventDefault();
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const form = event.currentTarget;
+  const { error } = await client.from("competitions").insert({
+    title: form.title.value.trim(),
+    theme: form.theme.value.trim(),
+    description: form.description.value.trim(),
+    is_active: true,
+    created_by: state.session.user.id,
+    created_by_email: state.session.user.email || ""
+  });
+  if (error) return toast(error.message);
+  form.reset();
+  toast("Competition created.");
+  await loadPublicData();
+}
+
+async function submitCompetitionEntry(event) {
+  event.preventDefault();
+  if (!client || !state.session) return toast("Log in to submit entries.");
+  const form = event.currentTarget;
+  const compId = form.dataset.compId;
+  const file = form.image.files[0];
+  if (!file) return toast("Choose an image.");
+  try {
+    const imageUrl = await uploadStorageImage(file, "albums");
+    const payload = {
+      competition_id: compId,
+      title: form.title.value.trim(),
+      artist_name: form.artist_name.value.trim() || state.profile?.display_name || state.session.user.email?.split("@")[0],
+      image_url: imageUrl,
+      user_id: state.session.user.id,
+      created_at: new Date().toISOString()
+    };
+    const { error } = await client.from("competition_entries").insert(payload);
+    if (error) return toast(error.message);
+    form.reset();
+    toast("Entry submitted.");
+    await loadPublicData();
+  } catch (err) {
+    toast(err.message || "Failed to submit entry.");
+  }
+}
+
+async function voteEntry(entryId) {
+  if (!client || !state.session) return toast("Log in to vote.");
+  const existing = state.competitionVotes.find((v) => v.entry_id === entryId && v.user_id === state.session.user.id);
+  if (existing) {
+    const { error } = await client.from("competition_votes").delete().eq("id", existing.id);
+    if (error) return toast(error.message);
+    toast("Vote removed.");
+  } else {
+    const { error } = await client.from("competition_votes").insert({ entry_id: entryId, user_id: state.session.user.id, created_at: new Date().toISOString() });
+    if (error) return toast(error.message);
+    toast("Vote recorded.");
+  }
+  await loadPublicData();
+}
+
+async function deleteCompetition(competitionId) {
+  if (!client || state.profile?.role !== "admin") return toast("Admin access only.");
+  const { error } = await client.from("competitions").delete().eq("id", competitionId);
+  if (error) return toast(error.message);
+  toast("Competition deleted.");
+  await loadPublicData();
+}
+
 async function saveProfile(event) {
   event.preventDefault();
   if (!client || !state.session) return toast("Log in first.");
@@ -1018,6 +1205,12 @@ function bindEvents() {
     const removeAlbumPhotoButton = event.target.closest("[data-remove-album-photo]");
     const selectedMember = event.target.closest("[data-select-member]");
     const quickRole = event.target.closest("[data-quick-role]");
+    const albumNext = event.target.closest("[data-album-next]");
+    const albumPrev = event.target.closest("[data-album-prev]")?.dataset.albumPrev ? event.target.closest("[data-album-prev]") : null;
+    const deleteAlbumBtn = event.target.closest("[data-delete-album]");
+    const voteBtn = event.target.closest("[data-vote-entry]");
+    const deleteCompetitionBtn = event.target.closest("[data-delete-competition]");
+
     if (editId) editArtwork(editId);
     if (approveId) moderateArtwork(approveId, "approved");
     if (rejectId) moderateArtwork(rejectId, "rejected");
@@ -1026,6 +1219,42 @@ function bindEvents() {
     if (removeAlbumPhotoButton) removeAlbumPhoto(removeAlbumPhotoButton.dataset.removeAlbumPhoto, removeAlbumPhotoButton.dataset.photoUrl);
     if (selectedMember) selectMember(selectedMember.dataset.selectMember, selectedMember.dataset.selectMemberName);
     if (quickRole) updateRoleForEmail(quickRole.dataset.quickRole, quickRole.dataset.roleValue);
+
+    if (albumNext) {
+      const id = albumNext.dataset.albumNext;
+      const carousel = document.querySelector(`[data-album-carousel="${id}"]`);
+      if (carousel) {
+        const imgs = [...carousel.querySelectorAll('img')];
+        const current = parseInt(carousel.dataset.currentIndex || '0', 10) || 0;
+        const next = (current + 1) % imgs.length;
+        imgs.forEach((img) => img.hidden = img.dataset.index !== String(next));
+        carousel.dataset.currentIndex = String(next);
+      }
+    }
+
+    if (albumPrev) {
+      const id = albumPrev.dataset.albumPrev;
+      const carousel = document.querySelector(`[data-album-carousel="${id}"]`);
+      if (carousel) {
+        const imgs = [...carousel.querySelectorAll('img')];
+        const current = parseInt(carousel.dataset.currentIndex || '0', 10) || 0;
+        const prev = (current - 1 + imgs.length) % imgs.length;
+        imgs.forEach((img) => img.hidden = img.dataset.index !== String(prev));
+        carousel.dataset.currentIndex = String(prev);
+      }
+    }
+
+    if (deleteAlbumBtn) {
+      deleteAlbum(deleteAlbumBtn.dataset.deleteAlbum);
+    }
+
+    if (voteBtn) {
+      voteEntry(voteBtn.dataset.voteEntry);
+    }
+
+    if (deleteCompetitionBtn) {
+      deleteCompetition(deleteCompetitionBtn.dataset.deleteCompetition);
+    }
   });
 
   const meetingForm = $("[data-meeting-form]");
@@ -1052,6 +1281,12 @@ function bindEvents() {
   if (featuredForm) featuredForm.addEventListener("submit", saveFeaturedArtist);
   const profileForm = $("[data-profile-form]");
   if (profileForm) profileForm.addEventListener("submit", saveProfile);
+
+  const competitionForm = $("[data-competition-form]");
+  if (competitionForm) competitionForm.addEventListener("submit", saveCompetition);
+  const competitionEntryForm = $("[data-competition-entry-form]");
+  if (competitionEntryForm) competitionEntryForm.addEventListener("submit", submitCompetitionEntry);
+
   document.addEventListener("submit", (event) => {
     if (event.target.matches("[data-comment-form]")) saveComment(event);
   });
