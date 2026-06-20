@@ -508,7 +508,34 @@ function renderAll() {
   renderAttendance();
   renderCommunity();
   renderCompetitions();
+  renderCompetitionManager();
   renderSettings();
+}
+
+function renderCompetitionManager() {
+  const manager = $("[data-competition-manager]");
+  if (!manager) return;
+  if (state.profile?.role !== "admin") {
+    manager.innerHTML = `<div class="empty">Admin access only.</div>`;
+    return;
+  }
+  if (!state.competitions.length) {
+    manager.innerHTML = `<div class="empty">No competitions yet.</div>`;
+    return;
+  }
+  manager.innerHTML = state.competitions.map((c) => `
+    <article class="submission-item">
+      <div>
+        <h4>${escapeHtml(c.title)}</h4>
+        <p>${escapeHtml(c.theme || "")}</p>
+        <p>${escapeHtml(c.description || "")}</p>
+        <p>Created by ${escapeHtml(c.created_by_email || "")}</p>
+      </div>
+      <div class="submission-controls">
+        <button class="small-button danger" type="button" data-delete-competition="${escapeHtml(c.id)}">Delete</button>
+      </div>
+    </article>
+  `).join("");
 }
 
 async function loadProfile() {
