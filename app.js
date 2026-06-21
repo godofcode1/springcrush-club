@@ -506,21 +506,78 @@ function enforceAdminControls() {
   }
 }
 
+function competitionCardMarkup(comp) {
+  return `
+    <article class="art-card album-card competition-card">
+      <div class="art-card-body">
+        <h3>${escapeHtml(comp.title)}</h3>
+        <p>${escapeHtml(comp.description || "")}</p>
+        <p class="eyebrow">Theme: ${escapeHtml(comp.theme || "")}</p>
+        ${state.profile?.role === "admin" ? `<div class="moderation-actions"><button class="small-button danger" type="button" data-delete-competition="${escapeHtml(comp.id)}">Delete competition</button></div>` : ""}
+      </div>
+    </article>
+  `;
+}
+
 function renderCompetitionCarousel() {
   const carouselEl = $("[data-competition-carousel]");
   const active = state.competitions.find((c) => c.is_active) || null;
   if (!carouselEl) return;
   const entries = active ? state.competitionEntries.filter((e) => e.competition_id === active.id) : [];
-  if (!entries.length) {
-    carouselEl.innerHTML = `<div class="empty">No entries yet.</div>`;
+
+  // If there are entries, show the main image in the blank and keep arrows down next to entries
+  if (entries.length) {
+    carouselEl.dataset.currentIndex = carouselEl.dataset.currentIndex || '0';
+    const current = parseInt(carouselEl.dataset.currentIndex || '0', 10) || 0;
+    const entry = entries[current % entries.length];
+    // show main image and a visible overlay with competition meta + submission form
+    const submissionFormHTML = active && active.is_active ? `
+      <form data-competition-entry-form data-comp-id="${escapeHtml(active.id)}" class="album-upload-form competition-form-inline">
+        <label>Title<input name="title" required></label>
+        <label>Your name<input name="artist_name" value="${escapeHtml(state.profile?.display_name || state.session?.user?.email?.split("@")[0] || "")}" required></label>
+        <label>Image<input name="image" type="file" accept="image/*" required></label>
+        <button class="button" type="submit">Submit entry</button>
+      </form>
+    ` : '';
+
+    carouselEl.innerHTML = `
+      <div class="carousel-main-image" style="width:100%;height:100%">
+        <img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">
+      </div>
+      <div class="competition-blank-overlay">
+        <h3>${escapeHtml(active?.title || '')}</h3>
+        <p>${escapeHtml(active?.description || '')}</p>
+        <p class="eyebrow">Theme: ${escapeHtml(active?.theme || '')}</p>
+        ${submissionFormHTML}
+      </div>
+    `;
     return;
   }
-  // render images inside carousel
-  carouselEl.dataset.currentIndex = carouselEl.dataset.currentIndex || '0';
-  carouselEl.innerHTML = `${entries.map((entry, idx) => `<img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" data-index="${idx}" ${idx === 0 ? '' : 'hidden'} loading="lazy">`).join("")}${entries.length > 1 ? `<div class="album-nav">
-      <button class="small-button light" type="button" data-competition-prev aria-label="Previous entry">‹</button>
-      <button class="small-button light" type="button" data-competition-next aria-label="Next entry">›</button>
-    </div>` : ""}`;
+
+  // No entries: fill the blank with competition info and submission form (if active)
+  if (active) {
+    const submissionFormHTML = active.is_active ? `
+      <form data-competition-entry-form data-comp-id="${escapeHtml(active.id)}" class="album-upload-form competition-form-inline">
+        <label>Title<input name="title" required></label>
+        <label>Your name<input name="artist_name" value="${escapeHtml(state.profile?.display_name || state.session?.user?.email?.split("@")[0] || "")}" required></label>
+        <label>Image<input name="image" type="file" accept="image/*" required></label>
+        <button class="button" type="submit">Submit entry</button>
+      </form>
+    ` : `<div class="empty">Competition is closed.</div>`;
+
+    carouselEl.innerHTML = `
+      <div class="competition-blank">
+        <h3>${escapeHtml(active.title)}</h3>
+        <p>${escapeHtml(active.description || "")}</p>
+        <p class="eyebrow">Theme: ${escapeHtml(active.theme || "")}</p>
+        ${submissionFormHTML}
+      </div>
+    `;
+    return;
+  }
+
+  // fallback
+  carouselEl.innerHTML = `<div class="empty">No entries yet.</div>`;
 }
 
 function renderAll() {
@@ -537,6 +594,7 @@ function renderAll() {
   renderAttendance();
   renderCommunity();
   renderCompetitions();
+  renderCompetitionCarousel();
   renderCompetitionManager();
   renderSettings();
 }
@@ -1053,9 +1111,74 @@ function renderCompetitions() {
   const feat = $("[data-competitions]");
   if (feat) {
     const active = state.competitions.find((c) => c.is_active) || null;
-    feat.innerHTML = active
-      ? `<h2>${escapeHtml(active.title)}</h2><p>${escapeHtml(active.description || "")}</p><p><strong>Theme:</strong> ${escapeHtml(active.theme || "")}</p>${state.profile?.role === "admin" ? `<div class="moderation-actions"><button class="small-button danger" type="button" data-delete-competition="${escapeHtml(active.id)}">Delete competition</button></div>` : ""}`
-      : (state.profile?.role === "admin" ? `<form data-competition-form class="form album-upload-form"><label>Title<input name="title" required></label><label>Theme<input name="theme"></label><label>Description<textarea name="description"></textarea></label><button class="button" type="submit">Create competition</button></form>` : `<p>No active competition.</p>`);
+    if (active) {
+      const entries = state.competitionEntries.filter((e) => e.competition_id === active.id);
+      if (entries.length) {
+        // images only in carousel (no arrows here) — metadata + form sit in the blank above
+        const imagesHTML = entries.map((entry, idx) => `
+            <img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" data-index="${idx}" ${idx === 0 ? '' : 'hidden'} loading="lazy">
+          `).join("");
+
+        // submission form (show when competition active)
+        const submissionFormHTML = active.is_active ? `<form data-competition-entry-form data-comp-id="${escapeHtml(active.id)}" class="album-upload-form">
+            <label>Title<input name="title" required></label>
+            <label>Your name<input name="artist_name" value="${escapeHtml(state.profile?.display_name || state.session?.user?.email?.split("@")[0] || "")}" required></label>
+            <label>Image<input name="image" type="file" accept="image/*" required></label>
+            <button class="button" type="submit">Submit entry</button>
+          </form>` : `<div class="empty">Competition is closed.</div>`;
+
+        // compact entries list (arrows will be placed here)
+        const entriesListHTML = entries.map((entry) => {
+          const voteCount = state.competitionVotes.filter((v) => v.entry_id === entry.id).length;
+          const userVoted = state.competitionVotes.some((v) => v.entry_id === entry.id && v.user_id === state.session?.user?.id);
+          return `
+            <div class="entry-row" data-entry-id="${escapeHtml(entry.id)}">
+              <img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}">
+              <div class="entry-meta">
+                <strong>${escapeHtml(entry.title)}</strong>
+                <div class="eyebrow">by ${escapeHtml(entry.artist_name || '')} — ${voteCount} votes</div>
+              </div>
+              <div class="entry-action">${state.session ? `<button class="small-button" type="button" data-vote-entry="${escapeHtml(entry.id)}">${userVoted ? 'Unvote' : 'Vote'}</button>` : ''}</div>
+            </div>
+          `;
+        }).join("");
+
+        // nav buttons placed inside the entries panel (where arrows used to be)
+        const navButtonsHTML = entries.length > 1 ? `<div class="album-nav">
+            <button class="small-button light" type="button" data-competition-prev aria-label="Previous entry">‹</button>
+            <button class="small-button light" type="button" data-competition-next aria-label="Next entry">›</button>
+          </div>` : "";
+
+        feat.innerHTML = `
+          <div class="album-carousel large-carousel" data-competition-carousel data-current-index="0">
+            ${imagesHTML}
+          </div>
+          <div class="competition-meta">
+            <h2>${escapeHtml(active.title)}</h2>
+            <p>${escapeHtml(active.description || "")}</p>
+            <p class="eyebrow">Theme: ${escapeHtml(active.theme || "")}</p>
+            ${submissionFormHTML}
+            ${state.profile?.role === "admin" ? `<div class="moderation-actions"><button class="small-button danger" type="button" data-delete-competition="${escapeHtml(active.id)}">Delete competition</button></div>` : ""}
+          </div>
+          <div class="competition-entries">${navButtonsHTML}${entriesListHTML}</div>
+        `;
+      } else {
+        // no entries yet — show competition details and submission form in the blank
+        feat.innerHTML = `
+          ${competitionCardMarkup(active)}
+          ${active.is_active ? `<div class="album-upload-form">` +
+            `<form data-competition-entry-form data-comp-id="${escapeHtml(active.id)}" class="album-upload-form">` +
+            `<label>Title<input name="title" required></label>` +
+            `<label>Your name<input name="artist_name" value="${escapeHtml(state.profile?.display_name || state.session?.user?.email?.split("@")[0] || "")}" required></label>` +
+            `<label>Image<input name="image" type="file" accept="image/*" required></label>` +
+            `<button class="button" type="submit">Submit entry</button>` +
+            `</form></div>` : ''}
+        `;
+      }
+    } else {
+      // creation moved to admin page only; do not show creation form here
+      feat.innerHTML = `<p>No active competition.</p>`;
+    }
   }
 
   const area = $("[data-competition-area]");
@@ -1374,6 +1497,7 @@ function bindEvents() {
   document.addEventListener("submit", (event) => {
     if (event.target.matches("[data-comment-form]")) return saveComment(event);
     if (event.target.matches("[data-competition-entry-form]")) return submitCompetitionEntry(event);
+    if (event.target.matches("[data-competition-form]")) return saveCompetition(event);
   });
 }
 
@@ -1413,6 +1537,11 @@ async function init() {
   }
   await loadPublicData();
   await loadPrivateData();
+
+  // Defensive: remove any competition creation forms on non-admin pages (fixes caching/stale HTML)
+  if (!location.pathname.endsWith('admin.html')) {
+    $$('[data-competition-form]').forEach((f) => f.remove());
+  }
 }
 
 init();

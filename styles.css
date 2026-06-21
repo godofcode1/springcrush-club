@@ -1321,11 +1321,34 @@ textarea:focus {
   .album-carousel[data-competition-carousel] {
     height: 260px;
     margin-bottom: 12px;
+    position: relative; /* ensure nav positions correctly */
+    overflow: hidden;
   }
   .album-carousel[data-competition-carousel] img {
     object-fit: contain;
     height: 100%;
     width: 100%;
+    max-width: 100%;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* Album nav positioning inside carousel */
+  .album-nav {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 6;
+  }
+  .album-nav .small-button {
+    background: rgba(255,255,255,0.98);
+    color: var(--ink);
+    min-width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    padding: 6px 10px;
   }
 
   /* Competition entries grid - tighter and responsive */
@@ -1358,6 +1381,94 @@ textarea:focus {
     width: 100%;
     box-sizing: border-box;
   }
+}
+
+/* Desktop: ensure album carousel container positions nav correctly */
+.album-carousel { position: relative; overflow: hidden; }
+.album-carousel img { max-width: 100%; height: auto; display: block; }
+
+/* Large competition carousel used in the top panel */
+.album-carousel.large-carousel { min-height: 420px; display: block; }
+.album-carousel.large-carousel img { width: 100%; height: 100%; object-fit: cover; }
+
+/* The compact entries list sits over the carousel in the lower-right */
+.competition-entries { position: absolute; right: 12px; bottom: 12px; width: 360px; max-height: calc(100% - 28px); overflow: auto; background: rgba(255,255,255,0.96); border: 1px solid var(--line); border-radius: 6px; padding: 8px; box-shadow: var(--shadow); z-index: 7; }
+.competition-entries .entry-row { display: grid; grid-template-columns: 56px 1fr auto; gap: 8px; align-items: center; padding: 8px 6px; border-bottom: 1px dashed var(--line); }
+.competition-entries .entry-row:last-child { border-bottom: 0; }
+.competition-entries img { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; }
+.competition-entries .entry-meta { font-size: 0.92rem; }
+.competition-entries .entry-action { display: flex; align-items: center; }
+
+/* place arrows at top of entries panel */
+.competition-entries .album-nav { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+.competition-entries .album-nav .small-button { min-width: 40px; height: 36px; }
+
+@media (max-width: 860px) {
+  .album-carousel.large-carousel { min-height: 220px; }
+  .competition-entries { position: static; width: 100%; max-height: none; margin-top: 12px; box-shadow: none; border-radius: 4px; background: transparent; border: 0; padding: 0; }
+  .competition-entries .entry-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .competition-entries .album-nav { justify-content: center; margin: 8px 0; }
+}
+
+
+/* Competition entries panel placed where arrows were on larger screens */
+.competition-entries {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 320px;
+  max-height: calc(100% - 28px);
+  overflow: auto;
+  background: rgba(255,255,255,0.96);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: var(--shadow);
+  z-index: 7;
+}
+.competition-entries .entry {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 6px;
+  border-bottom: 1px dashed var(--line);
+}
+.competition-entries .entry:last-child { border-bottom: 0; }
+.competition-entries img { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; }
+.competition-entries h4 { margin: 0 0 6px 0; font-size: 0.95rem; }
+.competition-entries p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.competition-entries .entry-controls { display: flex; align-items: center; }
+
+@media (max-width: 860px) {
+  .competition-entries {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 12px;
+    box-shadow: none;
+    border-radius: 4px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+  .competition-entries .entry { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .album-carousel[data-competition-carousel] { padding-bottom: 12px; }
+}
+
+/* Prevent any accidental horizontal overflow from competition panels */
+[data-competition-area], [data-competition-carousel], .gallery-grid[data-competition-area] { box-sizing: border-box; max-width: 100%; }
+
+/* Hide album nav unless it has children (defensive) */
+.album-nav:empty { display: none !important; }
+.album-nav { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; z-index: 6; }
+.album-nav .small-button { background: rgba(255,255,255,0.98); color: var(--ink); border-radius: 6px; padding: 6px 10px; }
+
+/* Prevent any accidental horizontal overflow from competition panels */
+[data-competition-area], [data-competition-carousel], .gallery-grid[data-competition-area] { box-sizing: border-box; max-width: 100%; }
+
+/* Hide album nav unless it has children (defensive) */
+.album-nav:empty { display: none !important; }
 
   .album-nav .small-button {
     min-width: 48px;
