@@ -1369,7 +1369,8 @@ function bindEvents() {
   if (competitionEntryForm) competitionEntryForm.addEventListener("submit", submitCompetitionEntry);
 
   document.addEventListener("submit", (event) => {
-    if (event.target.matches("[data-comment-form]")) saveComment(event);
+    if (event.target.matches("[data-comment-form]")) return saveComment(event);
+    if (event.target.matches("[data-competition-entry-form]")) return submitCompetitionEntry(event);
   });
 }
 
