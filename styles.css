@@ -1213,3 +1213,83 @@ textarea:focus {
   accent-color: var(--leaf-dark);
   width: auto;
 }
+
+/* Mobile improvements for competition and entry layouts */
+@media (max-width: 860px) {
+  .section-head {
+    grid-template-columns: 1fr;
+  }
+
+  /* Competition carousel - keep visible and touch-friendly */
+  .album-carousel[data-competition-carousel] {
+    height: 260px;
+    margin-bottom: 12px;
+  }
+  .album-carousel[data-competition-carousel] img {
+    object-fit: contain;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* Competition entries grid - tighter and responsive */
+  .gallery-grid[data-competition-area] {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .panel .form,
+  .album-upload-form {
+    padding: 12px;
+  }
+
+  /* Submission items stack vertically on small screens */
+  .submission-item {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .submission-item img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: auto;
+    border-radius: 6px;
+  }
+
+  /* Make controls easier to tap */
+  .submission-controls .small-button,
+  .small-button {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .album-nav .small-button {
+    min-width: 48px;
+    height: 48px;
+  }
+
+  .album-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .art-card h3 {
+    font-size: 1rem;
+  }
+
+  .page-title {
+    font-size: 2.4rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .album-carousel[data-competition-carousel] {
+    height: 200px;
+  }
+  .page-title {
+    font-size: 1.8rem;
+  }
+  /* Ensure nav buttons remain usable */
+  .album-nav .small-button {
+    min-width: 44px;
+    height: 44px;
+  }
+}
