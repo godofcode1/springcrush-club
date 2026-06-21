@@ -520,20 +520,32 @@ h3 {
   margin-bottom: 12px;
   overflow: hidden; /* prevent children from overflowing */
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px; /* ensure arrows vertically center even if image not loaded */
+}
+
+/* Slightly larger default for competitions */
+.album-carousel[data-competition-carousel] {
+  min-height: 240px;
 }
 
 .album-carousel img {
   width: 100%;
-  height: 100%;
+  height: auto; /* let image determine height */
   display: block;
   border-radius: 4px;
   object-fit: cover; /* default for desktop */
   max-width: 100%;
 }
 
-/* Competition carousel should use contain on small screens so images fit */
-.album-carousel[data-competition-carousel] img {
-  object-fit: cover;
+/* Competition carousel uses contain on small screens so images fit */
+@media (max-width: 860px) {
+  .album-carousel[data-competition-carousel] img {
+    object-fit: contain;
+    max-height: 100%;
+  }
 }
 
 .album-nav {
@@ -566,7 +578,6 @@ h3 {
 @media (max-width: 860px) {
   html, body { overflow-x: hidden; }
   .album-carousel { padding: 0 4px; }
-  .album-carousel img { object-fit: contain; height: 100%; }
   .album-nav { left: 8px; right: 8px; }
   .album-nav .small-button { background: rgba(255,255,255,0.98); }
 
@@ -581,8 +592,9 @@ h3 {
 }
 
 @media (max-width: 520px) {
-  .album-carousel[data-competition-carousel] { height: 200px; }
+  .album-carousel[data-competition-carousel] { min-height: 200px; }
   .album-nav { left: 6px; right: 6px; }
+  .album-nav .small-button { min-width: 40px; height: 40px; }
 }
 
 
