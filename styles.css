@@ -805,6 +805,21 @@ textarea:focus {
   border-top: 1px solid var(--line);
   margin-top: 18px;
   padding-top: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+/* Competition submit separation */
+[data-competition-area], .gallery-grid[data-competition-area] {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+/* Ensure submit form and entries are visually separated on mobile */
+@media (max-width: 860px) {
+  .album-upload-form { padding-bottom: 20px; margin-bottom: 20px; }
+  .gallery-grid[data-competition-area] { margin-top: 12px; }
 }
 
 .album-admin-item {
