@@ -54,7 +54,7 @@ function escapeHtml(value = "") {
 }
 
 // Compress an image client-side to reduce Supabase storage usage.
-async function compressImage(file, maxWidth = 1400, quality = 0.78) {
+async function compressImage(file, maxWidth = 1024, quality = 0.72) {
   if (!file || !file.type?.startsWith?.("image/")) return file;
   try {
     const bitmap = await createImageBitmap(file);
@@ -66,13 +66,18 @@ async function compressImage(file, maxWidth = 1400, quality = 0.78) {
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(bitmap, 0, 0, width, height);
-    const mime = "image/jpeg";
-    const blob = await new Promise((res) => canvas.toBlob(res, mime, quality));
+    // Prefer WebP (smaller), fall back to JPEG if not supported.
+    let mime = "image/webp";
+    let blob = await new Promise((res) => canvas.toBlob(res, mime, quality));
+    if (!blob) {
+      mime = "image/jpeg";
+      blob = await new Promise((res) => canvas.toBlob(res, mime, quality));
+    }
     if (!blob) return file;
-    const name = (file.name || "image").replace(/\.[^/.]+$/, "") + ".jpg";
+    const ext = mime.split("/")[1] || "jpg";
+    const name = (file.name || "image").replace(/\.[^/.]+$/, "") + `.${ext}`;
     return new File([blob], name, { type: mime });
   } catch (err) {
-    // If compression fails, fall back to original file.
     console.warn("Image compression failed", err);
     return file;
   }
@@ -671,8 +676,8 @@ async function uploadStorageImage(file, folder = "artwork") {
   if (!file) return null;
   try {
     // compress to save Supabase storage
-    const compressed = await compressImage(file, 1400, 0.78);
-    const ext = compressed.name.split(".").pop()?.toLowerCase() || "jpg";
+    const compressed = await compressImage(file, 1024, 0.72);
+    const ext = (compressed.type || "").split("/").pop()?.toLowerCase() || compressed.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${state.session.user.id}/${folder}/${crypto.randomUUID()}.${ext}`;
     const { error } = await client.storage.from("artwork").upload(path, compressed, { upsert: false });
     if (error) throw error;
