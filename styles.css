@@ -1261,6 +1261,36 @@ textarea:focus {
   width: auto;
 }
 
+/* Additional mobile overflow fixes */
+@media (max-width: 860px) {
+  /* Hide decorative pseudo-elements that can extend beyond viewport */
+  .hero::after,
+  .section::after {
+    display: none !important;
+  }
+
+  /* Prevent any element from causing horizontal scroll */
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Ensure large headings wrap and do not overflow */
+  .page-title {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    font-size: 2.6rem; /* slightly smaller on narrow screens */
+  }
+
+  /* Reduce excessive padding that may cause overflow */
+  .topbar, .section {
+    padding-left: 12px;
+    padding-right: 12px;
+    box-sizing: border-box;
+  }
+}
+
 /* Mobile improvements for competition and entry layouts */
 @media (max-width: 860px) {
   .section-head {
