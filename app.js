@@ -407,10 +407,10 @@ function renderCommunity() {
           <article class="art-card album-card" data-album-id="${escapeHtml(album.id)}">
             <div class="album-carousel" data-album-carousel="${escapeHtml(album.id)}" data-current-index="0">
               ${photoSet.map((photo, idx) => `<img src="${escapeHtml(photo)}" alt="${escapeHtml(album.title)} photo" loading="lazy" data-index="${idx}" ${idx === 0 ? "" : "hidden"}>`).join("")}
-              <div class="album-nav">
+              ${photoSet.length > 1 ? `<div class="album-nav">
                 <button class="small-button light" type="button" data-album-prev="${escapeHtml(album.id)}" aria-label="Previous photo">‹</button>
                 <button class="small-button light" type="button" data-album-next="${escapeHtml(album.id)}" aria-label="Next photo">›</button>
-              </div>
+              </div>` : ""}
             </div>
             <div class="art-card-body">
               <h3>${escapeHtml(album.title)}</h3>
@@ -517,7 +517,10 @@ function renderCompetitionCarousel() {
   }
   // render images inside carousel
   carouselEl.dataset.currentIndex = carouselEl.dataset.currentIndex || '0';
-  carouselEl.innerHTML = `${entries.map((entry, idx) => `<img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" data-index="${idx}" ${idx === 0 ? '' : 'hidden'} loading="lazy">`).join("")}`;
+  carouselEl.innerHTML = `${entries.map((entry, idx) => `<img src="${escapeHtml(entry.image_url || demoImages[0])}" alt="${escapeHtml(entry.title)}" data-index="${idx}" ${idx === 0 ? '' : 'hidden'} loading="lazy">`).join("")}${entries.length > 1 ? `<div class="album-nav">
+      <button class="small-button light" type="button" data-competition-prev aria-label="Previous entry">‹</button>
+      <button class="small-button light" type="button" data-competition-next aria-label="Next entry">›</button>
+    </div>` : ""}`;
 }
 
 function renderAll() {
